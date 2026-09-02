@@ -29,6 +29,7 @@ Included:
 - Project Context mode with scoped project terms.
 - Learned correction counts per malformed token.
 - Rejection feedback that reduces confidence for repeated bad suggestions.
+- Thought-level suggestion cards with one `Accept All` action per sentence or coherent thought.
 - Diagnostic events stored as JSONL-compatible records.
 - Export/import for state and export/clear for logs.
 - Personality presentation modes, including `Popular Girl`, isolated from correction logic.

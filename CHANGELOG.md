@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0 - 2026-09-02
+
+- Added thought-level suggestion grouping with one `Accept All` action per sentence or coherent thought.
+- Kept individual correction actions inside each grouped suggestion.
+
 ## 0.1.1 - 2026-09-02
 
 - Fixed `launch.ps1` so PowerShell accepts its `param` block.

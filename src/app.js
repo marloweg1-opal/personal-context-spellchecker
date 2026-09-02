@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const APP_VERSION = "0.1.0";
+  const APP_VERSION = "0.2.0";
   const STORAGE_KEY = "personal-contextual-spellchecker/state/v1";
   const LOG_KEY = "personal-contextual-spellchecker/logs/v1";
 
@@ -84,6 +84,66 @@
       });
     }
     return tokens;
+  }
+
+  function thoughtSpans(text) {
+    const spans = [];
+    const regex = /[^.!?\n]+[.!?\n]*/g;
+    let match;
+    while ((match = regex.exec(text))) {
+      const raw = match[0];
+      if (!raw.trim()) continue;
+      spans.push({
+        start: match.index,
+        end: match.index + raw.length,
+        text: raw.trim()
+      });
+    }
+    if (!spans.length && text.trim()) {
+      spans.push({ start: 0, end: text.length, text: text.trim() });
+    }
+    return spans;
+  }
+
+  function applyCorrectionsToText(text, issues) {
+    return issues
+      .slice()
+      .sort((a, b) => b.start - a.start)
+      .reduce((nextText, issue) => {
+        const replacement = matchCase(issue.raw, issue.suggestion);
+        return nextText.slice(0, issue.start) + replacement + nextText.slice(issue.end);
+      }, text);
+  }
+
+  function groupIssuesByThought(text, issues) {
+    const spans = thoughtSpans(text);
+    return spans
+      .map((span, groupIndex) => {
+        const groupIssues = issues.filter((issue) => issue.start >= span.start && issue.end <= span.end);
+        if (!groupIssues.length) return null;
+        return {
+          id: `thought-${groupIndex}`,
+          start: span.start,
+          end: span.end,
+          text: span.text,
+          issues: groupIssues,
+          preview: applyCorrectionsToText(text.slice(span.start, span.end), groupIssues.map((issue) => {
+            return Object.assign({}, issue, {
+              start: issue.start - span.start,
+              end: issue.end - span.start
+            });
+          })).trim()
+        };
+      })
+      .filter(Boolean);
+  }
+
+  function matchCase(original, correction) {
+    if (original.toUpperCase() === original) return correction.toUpperCase();
+    if (original[0] && original[0].toUpperCase() === original[0]) {
+      return correction[0].toUpperCase() + correction.slice(1);
+    }
+    return correction;
   }
 
   function damerauLevenshtein(a, b) {
@@ -485,6 +545,7 @@
       this.engine = new SpellEngine(this.store, this.log);
       this.presenter = new Presenter(this.byId("personality"));
       this.currentIssues = [];
+      this.currentGroups = [];
       this.bind();
       this.renderAll();
       this.check();
@@ -538,6 +599,7 @@
     check() {
       const text = this.byId("input-text").value;
       this.currentIssues = this.engine.check(text);
+      this.currentGroups = groupIssuesByThought(text, this.currentIssues);
       this.byId("status-line").textContent = `${this.currentIssues.length} likely misspelling${this.currentIssues.length === 1 ? "" : "s"} found`;
       this.renderSuggestions();
       this.renderDiagnostics();
@@ -553,27 +615,42 @@
 
     renderSuggestions() {
       const container = this.byId("suggestions");
-      this.byId("issue-count").textContent = `${this.currentIssues.length} issue${this.currentIssues.length === 1 ? "" : "s"}`;
+      this.byId("issue-count").textContent = `${this.currentIssues.length} issue${this.currentIssues.length === 1 ? "" : "s"} in ${this.currentGroups.length} thought${this.currentGroups.length === 1 ? "" : "s"}`;
       if (!this.currentIssues.length) {
         container.innerHTML = '<div class="empty-state">No likely misspellings found.</div>';
         return;
       }
 
       container.innerHTML = "";
-      this.currentIssues.forEach((issue, index) => {
+      this.currentGroups.forEach((group, groupIndex) => {
         const node = this.document.createElement("article");
-        node.className = "suggestion";
-        const alternatives = issue.alternatives.length ? ` Alternatives: ${issue.alternatives.join(", ")}.` : "";
+        node.className = "suggestion suggestion-group";
+        const issueRows = group.issues.map((issue) => {
+          const issueIndex = this.currentIssues.indexOf(issue);
+          const alternatives = issue.alternatives.length ? ` Alternatives: ${issue.alternatives.join(", ")}.` : "";
+          return `
+            <div class="suggestion-row">
+              <strong>${this.escape(this.presenter.message(issue))}</strong>
+              <p class="suggestion-meta"><span class="confidence">${Math.round(issue.confidence * 100)}%</span> confidence. ${this.escape(issue.reason)}.${this.escape(alternatives)}</p>
+              <div class="suggestion-actions">
+                <button data-action="accept" data-index="${issueIndex}" type="button">Accept</button>
+                <button data-action="reject" data-index="${issueIndex}" type="button">Reject</button>
+                <button data-action="add" data-index="${issueIndex}" type="button">Add Word</button>
+                <button data-action="never" data-index="${issueIndex}" type="button">Never Correct</button>
+                <button data-action="define" data-word="${this.escape(issue.suggestion)}" type="button">Define</button>
+              </div>
+            </div>
+          `;
+        }).join("");
         node.innerHTML = `
-          <strong>${this.escape(this.presenter.message(issue))}</strong>
-          <p class="suggestion-meta"><span class="confidence">${Math.round(issue.confidence * 100)}%</span> confidence. ${this.escape(issue.reason)}.${this.escape(alternatives)}</p>
-          <div class="suggestion-actions">
-            <button class="primary" data-action="accept" data-index="${index}" type="button">Accept</button>
-            <button data-action="reject" data-index="${index}" type="button">Reject</button>
-            <button data-action="add" data-index="${index}" type="button">Add Word</button>
-            <button data-action="never" data-index="${index}" type="button">Never Correct</button>
-            <button data-action="define" data-word="${this.escape(issue.suggestion)}" type="button">Define</button>
+          <div class="thought-head">
+            <div>
+              <span class="badge">${group.issues.length} fix${group.issues.length === 1 ? "" : "es"}</span>
+              <p class="thought-preview">${this.escape(group.preview)}</p>
+            </div>
+            <button class="primary" data-action="accept-group" data-group="${groupIndex}" type="button">Accept All</button>
           </div>
+          ${issueRows}
         `;
         node.addEventListener("click", (event) => this.onSuggestionClick(event));
         container.appendChild(node);
@@ -584,6 +661,10 @@
       const button = event.target.closest("button");
       if (!button) return;
       const action = button.dataset.action;
+      if (action === "accept-group") {
+        this.acceptGroup(this.currentGroups[Number(button.dataset.group)]);
+        return;
+      }
       const issue = this.currentIssues[Number(button.dataset.index)];
       if (action === "define") {
         const word = button.dataset.word;
@@ -609,8 +690,22 @@
 
     acceptIssue(issue) {
       const input = this.byId("input-text");
-      input.value = input.value.slice(0, issue.start) + this.matchCase(issue.raw, issue.suggestion) + input.value.slice(issue.end);
+      input.value = input.value.slice(0, issue.start) + matchCase(issue.raw, issue.suggestion) + input.value.slice(issue.end);
       this.store.learnCorrection(issue.raw, issue.suggestion);
+    }
+
+    acceptGroup(group) {
+      if (!group || !group.issues.length) return;
+      const input = this.byId("input-text");
+      input.value = applyCorrectionsToText(input.value, group.issues);
+      group.issues.forEach((issue) => this.store.learnCorrection(issue.raw, issue.suggestion));
+      this.log.write("correction_group.accepted", {
+        issueCount: group.issues.length,
+        start: group.start,
+        end: group.end
+      });
+      this.check();
+      this.renderWordBank();
     }
 
     importStateFile(file) {
@@ -628,14 +723,6 @@
         }
       });
       reader.readAsText(file);
-    }
-
-    matchCase(original, correction) {
-      if (original.toUpperCase() === original) return correction.toUpperCase();
-      if (original[0] && original[0].toUpperCase() === original[0]) {
-        return correction[0].toUpperCase() + correction.slice(1);
-      }
-      return correction;
     }
 
     renderWordBank() {
@@ -734,6 +821,9 @@
   window.PersonalSpellchecker = {
     APP_VERSION,
     tokenize,
+    thoughtSpans,
+    groupIssuesByThought,
+    applyCorrectionsToText,
     damerauLevenshtein,
     DiagnosticLog,
     SpellStore,

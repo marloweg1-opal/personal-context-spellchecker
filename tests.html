@@ -67,6 +67,15 @@
 
         issues = engine.check("I've had enoweg of this.");
         assert("infers enough from malformed token and sentence", issues.some((issue) => issue.raw === "enoweg" && issue.suggestion === "enough"));
+        let groups = api.groupIssuesByThought("I've had enoweg of this. I defintely agree.", engine.check("I've had enoweg of this. I defintely agree."));
+        assert("groups suggestions by coherent thought", groups.length === 2 && groups[0].issues.length === 1 && groups[1].issues.length === 1);
+
+        issues = engine.check("I've had enoweg of this and I defintely agree.");
+        groups = api.groupIssuesByThought("I've had enoweg of this and I defintely agree.", issues);
+        assert("combines multiple suggestions in one thought", groups.length === 1 && groups[0].issues.length === 2);
+        assert("accept all preview applies every suggestion", groups[0].preview.includes("enough") && groups[0].preview.includes("definitely"));
+        const offsetText = "I've had enoweg and defintely know.";
+        assert("bulk correction preserves offsets", api.applyCorrectionsToText(offsetText, engine.check(offsetText)).includes("enough and definitely"));
 
         issues = engine.check("begining stoped wht");
         assert("covers required fixture begining", issues.some((issue) => issue.suggestion === "beginning"));

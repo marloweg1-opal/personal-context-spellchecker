@@ -1,6 +1,6 @@
 # Architecture
 
-Version: 0.1.0
+Version: 0.2.0
 
 ## Component Boundaries
 
@@ -10,6 +10,7 @@ Version: 0.1.0
 - `DiagnosticLog`: append-style event log with capped local retention and JSONL export.
 - `Presenter`: personality layer. It formats suggestion copy only; it never changes detection, ranking, confidence, or accepted correction data.
 - `AppController`: DOM glue. It translates clicks into store/engine operations and renders current state.
+- `ThoughtGrouping`: pure helper functions that group correction decisions by sentence or coherent thought and apply grouped replacements without mutating state.
 
 ## Required Architecture Concerns
 
@@ -24,6 +25,10 @@ Version: 0.1.0
 9. Performance: candidate scoring is bounded by a compact seed dictionary and local word bank. Logs are capped at 200 events. Large dictionaries should use indexed lookup or a worker.
 10. Deployment: static files can be served from any basic file host or opened directly from disk. `launch.ps1` starts a non-elevated local server. `apps/extension/` is the Manifest V3 target.
 11. Security: all state stays local unless the user exports it. Rendered dynamic text is escaped. Definition lookup is opened with `noopener`. No remote scripts are loaded.
+
+## Suggestion Layer
+
+Suggestions are rendered as one card per sentence or coherent thought. Each card has one `Accept All` action that applies every correction in that thought, while preserving individual accept/reject/dictionary/never-correct controls for precise review.
 
 ## Extension Points
 

@@ -219,6 +219,42 @@ input {
   margin-bottom: 6px;
 }
 
+.suggestion-group {
+  display: grid;
+  gap: 10px;
+}
+
+.thought-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #f7fbfa;
+}
+
+.thought-head button {
+  padding: 0 14px;
+}
+
+.thought-preview {
+  margin: 8px 0 0;
+  color: var(--ink);
+  font-size: 0.96rem;
+  line-height: 1.45;
+}
+
+.suggestion-row {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.suggestion-row:first-of-type {
+  border-top: 0;
+}
+
 .suggestion-meta {
   margin: 0 0 10px;
   color: var(--muted);
@@ -339,5 +375,9 @@ pre {
 
   .add-word-form input {
     flex: 1 1 180px;
+  }
+
+  .thought-head {
+    grid-template-columns: 1fr;
   }
 }
