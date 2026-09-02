@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Personal Contextual Spellchecker</title>
+    <link rel="stylesheet" href="src/styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <h1>Personal Spellchecker</h1>
+          <p>Local-first contextual spelling suggestions with a persistent personal word bank.</p>
+        </div>
+        <div class="topbar-actions" aria-label="App actions">
+          <button id="export-state" type="button" title="Export word bank and learning state">Export State</button>
+          <button id="import-state" type="button" title="Import word bank and learning state">Import State</button>
+          <button id="export-logs" type="button" title="Export diagnostic logs">Export Logs</button>
+          <button id="clear-logs" type="button" title="Clear diagnostic logs">Clear Logs</button>
+          <button id="reset-demo" type="button" title="Clear saved demo data">Reset Demo</button>
+          <input id="state-file" type="file" accept="application/json,.json" hidden>
+        </div>
+      </header>
+
+      <section class="workbench" aria-label="Spellchecking workbench">
+        <div class="editor-panel">
+          <div class="panel-head">
+            <label for="input-text">Text</label>
+            <span id="status-line" role="status">Ready</span>
+          </div>
+          <textarea id="input-text" spellcheck="false">I defintely want to recieve teh context before we seperate the personal word bank.</textarea>
+          <div class="controls-row">
+            <button id="check-text" type="button">Check Spelling</button>
+            <label class="select-label" for="context-mode">Context</label>
+            <select id="context-mode">
+              <option value="personal">Personal</option>
+              <option value="project">Project Context</option>
+            </select>
+            <label class="select-label" for="personality">Personality</label>
+            <select id="personality">
+              <option value="direct">Direct</option>
+              <option value="popularGirl">Popular Girl</option>
+              <option value="quiet">Quiet</option>
+            </select>
+          </div>
+        </div>
+
+        <aside class="suggestions-panel" aria-label="Suggestions">
+          <div class="panel-head">
+            <h2>Suggestions</h2>
+            <span id="issue-count">0 issues</span>
+          </div>
+          <div id="suggestions" class="suggestions-list"></div>
+        </aside>
+      </section>
+
+      <section class="word-bank-section" aria-label="Personal word bank">
+        <div class="panel-head">
+          <h2>Word Bank</h2>
+          <form id="add-word-form" class="add-word-form" aria-label="Add personal word">
+            <input id="new-word" type="text" autocomplete="off" placeholder="Add a personal word">
+            <button type="submit">Add</button>
+          </form>
+        </div>
+        <div id="word-bank" class="word-bank"></div>
+      </section>
+
+      <section class="context-section" aria-label="Project context">
+        <div class="panel-head">
+          <div>
+            <h2>Project Context</h2>
+            <span>Scoped names and terms for the current writing context.</span>
+          </div>
+          <form id="add-context-term-form" class="add-word-form" aria-label="Add project context term">
+            <input id="new-context-term" type="text" autocomplete="off" placeholder="Add a project term">
+            <button type="submit">Add</button>
+          </form>
+        </div>
+        <div id="context-bank" class="word-bank"></div>
+      </section>
+
+      <section class="diagnostics-section" aria-label="Diagnostics">
+        <div class="panel-head">
+          <h2>Diagnostics</h2>
+          <span>Latest local events</span>
+        </div>
+        <pre id="diagnostics"></pre>
+      </section>
+    </main>
+
+    <script src="src/app.js"></script>
+  </body>
+</html>

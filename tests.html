@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Spellchecker Tests</title>
+    <link rel="stylesheet" href="src/styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <h1>Spellchecker Tests</h1>
+          <p>Dependency-free smoke tests for the local spellchecker engine.</p>
+        </div>
+      </header>
+      <pre id="test-output">Running...</pre>
+    </main>
+
+    <div hidden>
+      <select id="personality"><option value="direct">Direct</option></select>
+      <select id="context-mode"><option value="personal">Personal</option><option value="project">Project Context</option></select>
+      <button id="export-state"></button>
+      <button id="import-state"></button>
+      <button id="export-logs"></button>
+      <button id="clear-logs"></button>
+      <button id="reset-demo"></button>
+      <input id="state-file" type="file">
+      <button id="check-text"></button>
+      <form id="add-word-form"><input id="new-word"></form>
+      <form id="add-context-term-form"><input id="new-context-term"></form>
+      <textarea id="input-text"></textarea>
+      <span id="status-line"></span>
+      <span id="issue-count"></span>
+      <div id="suggestions"></div>
+      <div id="word-bank"></div>
+      <div id="context-bank"></div>
+      <pre id="diagnostics"></pre>
+    </div>
+
+    <script>
+      window.PERSONAL_SPELLCHECKER_SKIP_AUTO_START = true;
+      window.localStorage.clear();
+    </script>
+    <script src="src/app.js"></script>
+    <script>
+      const output = document.getElementById("test-output");
+      const lines = [];
+      const assert = (name, condition) => {
+        if (!condition) throw new Error(name);
+        lines.push(`PASS ${name}`);
+      };
+
+      try {
+        const api = window.PersonalSpellchecker;
+        const log = new api.DiagnosticLog(window.localStorage);
+        const store = new api.SpellStore(window.localStorage, log);
+        const engine = new api.SpellEngine(store, log);
+
+        assert("tokenizes words with offsets", api.tokenize("Fix teh word.")[1].start === 4);
+        assert("distance handles transposition", api.damerauLevenshtein("teh", "the") === 1);
+
+        let issues = engine.check("I defintely want to recieve the context.");
+        assert("detects known misspellings", issues.length === 2);
+        assert("infers definitely", issues[0].suggestion === "definitely");
+        assert("infers receive", issues[1].suggestion === "receive");
+
+        issues = engine.check("I've had enoweg of this.");
+        assert("infers enough from malformed token and sentence", issues.some((issue) => issue.raw === "enoweg" && issue.suggestion === "enough"));
+
+        issues = engine.check("begining stoped wht");
+        assert("covers required fixture begining", issues.some((issue) => issue.suggestion === "beginning"));
+        assert("covers required fixture stoped", issues.some((issue) => issue.suggestion === "stopped"));
+        assert("covers required fixture wht", issues.some((issue) => issue.suggestion === "what"));
+
+        store.addWord("Runevale", "test");
+        issues = engine.check("Runevale is personal.");
+        assert("honors personal word bank", issues.length === 0);
+
+        store.setActiveContext("project");
+        store.addContextTerm("Solara");
+        issues = engine.check("Solara is scoped.");
+        assert("honors project context terms", issues.length === 0);
+
+        store.markNeverCorrect("teh");
+        issues = engine.check("teh is intentionally mine.");
+        assert("honors never correct", issues.length === 0);
+
+        store.learnCorrection("speling", "spelling");
+        issues = engine.check("speling matters.");
+        assert("learns user correction", issues[0].suggestion === "spelling");
+
+        const beforeReject = engine.suggest({ lower: "speling" }, api.tokenize("speling matters."), 0).confidence;
+        store.rejectCorrection("speling", "spelling");
+        const afterReject = engine.suggest({ lower: "speling" }, api.tokenize("speling matters."), 0).confidence;
+        assert("rejection reduces learned correction confidence", afterReject < beforeReject);
+
+        const neutralPresenter = new api.Presenter({ value: "direct" });
+        const popularPresenter = new api.Presenter({ value: "popularGirl" });
+        const decision = engine.check("signiture again.")[0];
+        const stableSuggestion = decision.suggestion;
+        neutralPresenter.message(decision);
+        popularPresenter.message(decision);
+        assert("personality cannot alter correction results", decision.suggestion === stableSuggestion);
+
+        const privateSentence = "I've had enoweg of this.";
+        engine.check(privateSentence);
+        assert("ordinary diagnostic logs omit full user sentences", !log.exportText().includes(privateSentence));
+
+        const exported = store.exportState();
+        const importedLog = new api.DiagnosticLog(window.localStorage);
+        const importedStore = new api.SpellStore(window.localStorage, importedLog);
+        importedStore.importState(exported);
+        assert("state export/import round-trips", importedStore.hasPersonalWord("Runevale") && importedStore.hasContextTerm("Solara"));
+
+        assert("writes diagnostics", log.events.length > 0);
+        output.textContent = lines.join("\n");
+      } catch (error) {
+        output.textContent = `${lines.join("\n")}\nFAIL ${error.message}`;
+        throw error;
+      }
+    </script>
+  </body>
+</html>

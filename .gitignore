@@ -1,0 +1,11 @@
+logs/
+*.log
+*.jsonl
+spellchecker-state*.json
+spellchecker-diagnostics*.jsonl
+dist/
+build/
+node_modules/
+.env
+.DS_Store
+Thumbs.db
