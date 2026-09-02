@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0 - 2026-09-02
+
+- Added global proper noun capitalization separate from topic/project context.
+- Added relevant and irrelevant terms for topic/project word banks.
+- Added acronym entries categorized by topic with an expansion action.
+- Added identifier-style typo handling for `mini_ark`.
+- Added sound-out typo handling for `relevant` and `irrelevant`.
+
 ## 0.3.0 - 2026-09-02
 
 - Added titled project word banks.

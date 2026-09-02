@@ -65,22 +65,56 @@
         <div id="word-bank" class="word-bank"></div>
       </section>
 
+      <section class="proper-nouns-section" aria-label="Proper nouns">
+        <div class="panel-head">
+          <div>
+            <h2>Proper Nouns</h2>
+            <span>Global preferred capitalization for names, places, signs, systems, and concepts.</span>
+          </div>
+          <form id="add-proper-noun-form" class="add-word-form" aria-label="Add proper noun">
+            <input id="new-proper-noun" type="text" autocomplete="off" placeholder="Add proper noun">
+            <button type="submit">Add</button>
+          </form>
+        </div>
+        <div id="proper-nouns" class="word-bank"></div>
+      </section>
+
       <section class="context-section" aria-label="Project context">
         <div class="panel-head">
           <div>
-            <h2>Project Word Banks</h2>
-            <span>Scoped names, terms, and preferred capitalization for the current writing context.</span>
+            <h2>Topics & Projects</h2>
+            <span>Context modifiers that make terms relevant or irrelevant for the current thought.</span>
           </div>
-          <form id="add-context-form" class="add-word-form" aria-label="Create project word bank">
+          <form id="add-context-form" class="add-word-form" aria-label="Create topic or project bank">
             <input id="new-context-name" type="text" autocomplete="off" placeholder="New bank title">
             <button type="submit">Create</button>
           </form>
-          <form id="add-context-term-form" class="add-word-form" aria-label="Add project context term">
-            <input id="new-context-term" type="text" autocomplete="off" placeholder="Add a project term">
+          <form id="add-context-term-form" class="add-word-form" aria-label="Add context term">
+            <input id="new-context-term" type="text" autocomplete="off" placeholder="Add context term">
+            <select id="new-context-relevance" aria-label="Context relevance">
+              <option value="relevant">Relevant</option>
+              <option value="irrelevant">Irrelevant</option>
+            </select>
             <button type="submit">Add</button>
           </form>
         </div>
         <div id="context-bank" class="word-bank"></div>
+      </section>
+
+      <section class="acronyms-section" aria-label="Acronyms">
+        <div class="panel-head">
+          <div>
+            <h2>Acronyms</h2>
+            <span>Categorized by topic with one-click meaning expansion.</span>
+          </div>
+          <form id="add-acronym-form" class="add-word-form acronym-form" aria-label="Add acronym">
+            <input id="new-acronym" type="text" autocomplete="off" placeholder="ARK">
+            <input id="new-acronym-expansion" type="text" autocomplete="off" placeholder="Full meaning">
+            <input id="new-acronym-topic" type="text" autocomplete="off" placeholder="Topic">
+            <button type="submit">Add</button>
+          </form>
+        </div>
+        <div id="acronyms" class="word-bank"></div>
       </section>
 
       <section class="diagnostics-section" aria-label="Diagnostics">

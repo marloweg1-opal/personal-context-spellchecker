@@ -4,7 +4,7 @@ Small local-first MVP for spelling correction. It detects likely misspellings, r
 
 The "personal" part means the app learns the user's recurring misspellings, preferred corrections, private vocabulary, names, projects, nicknames, and deliberate spellings over time. It is not tied to any one workspace or subject area.
 
-Project Context mode adds a scoped term list for the current topic or project. Those terms help the spellchecker understand names and jargon while keeping the permanent personal word bank clean.
+Topic and project context modes add scoped term lists. Those terms act as relevance modifiers so the spellchecker can favor words that belong in the current conversation and suppress words that do not.
 
 ## Run
 
@@ -26,8 +26,10 @@ Included:
 - `SpellEngine` detection and intended-word ranking.
 - `SpellStore` state owner backed by `localStorage`.
 - Persistent word bank with favorite and never-correct flags.
-- Titled project word banks with scoped project terms.
-- Preferred capitalization for proper nouns, such as project names or named concepts.
+- Titled topic/project word banks with relevant and irrelevant scoped terms.
+- Global preferred capitalization for proper nouns.
+- Identifier-style words such as `mini_ark`.
+- Acronym bank categorized by topic, with one-click expansion into full meaning.
 - Learned correction counts per malformed token.
 - Rejection feedback that reduces confidence for repeated bad suggestions.
 - Thought-level suggestion cards with one `Accept All` action per sentence or coherent thought.

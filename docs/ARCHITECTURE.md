@@ -1,12 +1,14 @@
 # Architecture
 
-Version: 0.3.0
+Version: 0.4.0
 
 ## Component Boundaries
 
 - `SpellEngine`: pure-ish correction logic. It owns token analysis, dictionary checks, candidate generation, edit-distance scoring, context bonuses, and learned-correction weighting.
-- `SpellStore`: the only owner of mutable user state. It persists the personal word bank, favorite flags, never-correct flags, learned correction counts, rejection counts, and typo-pattern counters.
-- `ContextProfile`: a named scoped vocabulary layer for a writing context or project. It can prevent false positives, preserve preferred capitalization, and participate in candidate ranking without becoming permanent personal vocabulary.
+- `SpellStore`: the only owner of mutable user state. It persists the personal word bank, proper nouns, acronyms, favorite flags, never-correct flags, learned correction counts, rejection counts, and typo-pattern counters.
+- `ProperNounBank`: global preferred capitalization for names, signs, systems, and concepts that should not depend on the active project.
+- `ContextProfile`: a named scoped vocabulary layer for a writing topic or project. It stores terms as relevant or irrelevant so the active context can boost or suppress suggestions without becoming permanent personal vocabulary.
+- `AcronymBank`: topic-categorized acronym entries with expansion text. The correction engine may use acronyms for preferred casing, while the UI owns the explicit expansion action.
 - `DiagnosticLog`: append-style event log with capped local retention and JSONL export.
 - `Presenter`: personality layer. It formats suggestion copy only; it never changes detection, ranking, confidence, or accepted correction data.
 - `AppController`: DOM glue. It translates clicks into store/engine operations and renders current state.
@@ -16,7 +18,7 @@ Version: 0.3.0
 
 1. Maintainability: components are class-based and have explicit responsibilities. The seed dictionary, confusion pairs, and context hints are plain data that can later be replaced by richer providers.
 2. Testability: `tests.html` can instantiate the engine/store/log directly. The correction engine is isolated from DOM rendering.
-3. State ownership: only `SpellStore` writes user learning state and context profiles. The app never lets presentation modes mutate correction logic.
+3. State ownership: only `SpellStore` writes user learning state, proper nouns, acronyms, and context profiles. The app never lets presentation modes mutate correction logic.
 4. Dependency boundaries: no runtime dependencies in v0.1.0. Future dictionaries, NLP models, or sync services should be adapters behind `SpellEngine` or `SpellStore`.
 5. Logs / observability: every check, accepted correction, word-bank change, definition action, export, reset, and recovery path writes a structured event with app version and timestamp.
 6. Recovery: state parsing and import are guarded. Corrupt or incompatible state falls back to a fresh schema or restores the prior snapshot and logs the recovery event.
@@ -36,6 +38,8 @@ Suggestions are rendered as one card per sentence or coherent thought. Each card
 - Add a context provider that scores candidates from sentence embeddings or n-gram frequencies.
 - Add a sync adapter to `SpellStore` while keeping local-first recovery.
 - Add named context profiles beyond the MVP `Personal` and `Project Context` modes.
+- Add richer topic detection that automatically chooses a context profile from surrounding text.
+- Add acronym import/export helpers for larger personal glossaries.
 - Add definition providers behind a `DefinitionService` instead of direct lookup URLs.
 - Add more personalities by extending `Presenter` only.
 - Move expensive candidate scoring into a Web Worker when dictionary size grows.

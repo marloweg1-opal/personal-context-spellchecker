@@ -114,7 +114,9 @@ button.primary:hover,
 .editor-panel,
 .suggestions-panel,
 .word-bank-section,
+.proper-nouns-section,
 .context-section,
+.acronyms-section,
 .diagnostics-section {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -277,7 +279,9 @@ input {
 }
 
 .word-bank-section,
+.proper-nouns-section,
 .context-section,
+.acronyms-section,
 .diagnostics-section {
   margin-top: 18px;
   padding: 16px;
@@ -285,6 +289,14 @@ input {
 
 .add-word-form {
   justify-content: flex-end;
+}
+
+.acronym-form {
+  flex: 1 1 520px;
+}
+
+.acronym-form input:nth-of-type(2) {
+  flex: 1 1 240px;
 }
 
 .word-bank {

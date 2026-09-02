@@ -28,14 +28,18 @@
       <input id="state-file" type="file">
       <button id="check-text"></button>
       <form id="add-word-form"><input id="new-word"></form>
+      <form id="add-proper-noun-form"><input id="new-proper-noun"></form>
       <form id="add-context-form"><input id="new-context-name"></form>
-      <form id="add-context-term-form"><input id="new-context-term"></form>
+      <form id="add-context-term-form"><input id="new-context-term"><select id="new-context-relevance"><option value="relevant">Relevant</option><option value="irrelevant">Irrelevant</option></select></form>
+      <form id="add-acronym-form"><input id="new-acronym"><input id="new-acronym-expansion"><input id="new-acronym-topic"></form>
       <textarea id="input-text"></textarea>
       <span id="status-line"></span>
       <span id="issue-count"></span>
       <div id="suggestions"></div>
       <div id="word-bank"></div>
+      <div id="proper-nouns"></div>
       <div id="context-bank"></div>
+      <div id="acronyms"></div>
       <pre id="diagnostics"></pre>
     </div>
 
@@ -82,6 +86,11 @@
         assert("covers required fixture begining", issues.some((issue) => issue.suggestion === "beginning"));
         assert("covers required fixture stoped", issues.some((issue) => issue.suggestion === "stopped"));
         assert("covers required fixture wht", issues.some((issue) => issue.suggestion === "what"));
+        issues = engine.check("realavent and irrelavent are sound-it-out typos.");
+        assert("covers relevant sound-out typo", issues.some((issue) => issue.raw === "realavent" && issue.suggestion === "relevant"));
+        assert("covers irrelevant sound-out typo", issues.some((issue) => issue.raw === "irrelavent" && issue.suggestion === "irrelevant"));
+        issues = engine.check("min_ark is easy to mistype.");
+        assert("covers mini_ark identifier typo", issues.some((issue) => issue.raw === "min_ark" && issue.suggestion === "mini_ark"));
 
         store.addWord("Runevale", "test");
         issues = engine.check("Runevale is personal.");
@@ -92,17 +101,29 @@
         issues = engine.check("Solara is scoped.");
         assert("honors project context terms", issues.length === 0);
 
-        const hexseed = store.createContextProfile("HEXSEED");
-        store.addContextTerm("Libra", hexseed.id);
-        assert("creates titled project word banks", store.state.contextProfiles[hexseed.id].name === "HEXSEED");
+        store.addProperNoun("Libra");
         issues = engine.check("libra is a proper noun here.");
-        assert("proper nouns can auto-capitalize from project bank", issues.some((issue) => issue.raw === "libra" && issue.suggestion === "Libra"));
+        assert("proper nouns can auto-capitalize globally", issues.some((issue) => issue.raw === "libra" && issue.suggestion === "Libra"));
         assert("proper noun replacement preserves stored casing", api.applyCorrectionsToText("libra", [issues.find((issue) => issue.raw === "libra")]) === "Libra");
 
+        const projectArk = store.createContextProfile("Project ARK");
+        store.addContextTerm("mini_ark", projectArk.id, "relevant");
+        store.addContextTerm("Libra", projectArk.id, "irrelevant");
+        assert("creates titled topic and project banks", store.state.contextProfiles[projectArk.id].name === "Project ARK");
+        issues = engine.check("libra belongs in this topic.");
+        assert("active topic can mark a global proper noun irrelevant", !issues.some((issue) => issue.raw === "libra" && issue.suggestion === "Libra"));
+
         const careBloom = store.createContextProfile("CareBloomOS");
-        store.addContextTerm("Heartstone", careBloom.id);
+        store.addProperNoun("Heartstone");
         issues = engine.check("heartstone belongs in this project.");
-        assert("project bank proper nouns preserve camel casing", issues.some((issue) => issue.raw === "heartstone" && issue.suggestion === "Heartstone"));
+        assert("global proper nouns preserve camel casing", issues.some((issue) => issue.raw === "heartstone" && issue.suggestion === "Heartstone"));
+
+        store.addAcronym("ARK", "Adaptive Resonance Kernel", "Project ARK");
+        assert("stores acronyms by topic", store.state.acronyms.ark.topic === "Project ARK");
+        issues = engine.check("ark needs capitalization.");
+        assert("acronyms prefer uppercase casing", issues.some((issue) => issue.raw === "ark" && issue.suggestion === "ARK"));
+        issues = engine.check("Adaptive Resonance Kernel");
+        assert("acronym expansion words are treated as known", issues.length === 0);
 
         store.markNeverCorrect("teh");
         issues = engine.check("teh is intentionally mine.");
@@ -134,7 +155,7 @@
         const importedStore = new api.SpellStore(window.localStorage, importedLog);
         importedStore.importState(exported);
         const importedContexts = Object.values(importedStore.state.contextProfiles);
-        assert("state export/import round-trips", importedStore.hasPersonalWord("Runevale") && importedContexts.some((context) => context.terms.solara));
+        assert("state export/import round-trips", importedStore.hasPersonalWord("Runevale") && importedContexts.some((context) => context.terms.solara) && importedStore.state.properNouns.libra && importedStore.state.acronyms.ark);
 
         assert("writes diagnostics", log.events.length > 0);
         output.textContent = lines.join("\n");

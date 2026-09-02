@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const APP_VERSION = "0.3.0";
+  const APP_VERSION = "0.4.0";
   const STORAGE_KEY = "personal-contextual-spellchecker/state/v1";
   const LOG_KEY = "personal-contextual-spellchecker/logs/v1";
 
@@ -16,13 +16,13 @@
     "during", "each", "engine", "enough", "eventually", "every", "extension", "favorite", "favorited",
     "deliberate", "fix", "folder", "from", "general", "generative", "grammar", "guess", "had", "help",
     "hope", "hoping", "hopping", "i've", "infer", "intended", "into", "is", "it", "issue", "jargon", "learn", "likely", "local",
-    "logic", "logs", "maintain", "maintainability", "malformed", "mode", "my", "name", "names", "never",
+    "logic", "logs", "maintain", "maintainability", "malformed", "mini_ark", "mode", "my", "name", "names", "never",
     "not", "note", "observability", "of", "one", "optionally", "over", "persistent", "personal",
     "noun", "nouns", "personality", "popular", "preferred", "present", "private", "production", "profile", "project", "proper", "receive",
     "ready", "recovery", "recurring", "rename", "report", "reset", "rewriting", "scoped", "security", "sentence", "separate",
     "ship", "signature", "small", "source", "spellchecker", "spelling", "state", "stopped", "suggestion", "surface",
     "teasing", "testability", "the", "their", "there", "this", "thought", "through", "token",
-    "to", "tone", "topic", "useful", "user", "versioning", "vertical", "want", "we", "what", "word", "working", "works", "would", "write",
+    "to", "tone", "topic", "use", "useful", "user", "versioning", "vertical", "want", "we", "what", "word", "working", "works", "would", "write",
     "intentionally", "matter", "matters", "mine", "time"
   ];
 
@@ -38,6 +38,13 @@
     signeture: "signature",
     defintely: "definitely",
     definately: "definitely",
+    realavent: "relevant",
+    reallevant: "relevant",
+    relavant: "relevant",
+    relevent: "relevant",
+    irrelavent: "irrelevant",
+    irrelevent: "irrelevant",
+    irrelavant: "irrelevant",
     seperate: "separate",
     occured: "occurred",
     untill: "until",
@@ -46,7 +53,9 @@
     accomodate: "accommodate",
     contextul: "contextual",
     persistant: "persistent",
-    grammer: "grammar"
+    grammer: "grammar",
+    min_ark: "mini_ark",
+    miniark: "mini_ark"
   };
 
   const CONTEXT_HINTS = [
@@ -68,7 +77,7 @@
   }
 
   function normalizeWord(word) {
-    return String(word || "").toLowerCase().replace(/^[^a-z']+|[^a-z']+$/g, "");
+    return String(word || "").toLowerCase().replace(/^[^a-z_']+|[^a-z_']+$/g, "");
   }
 
   function makeContextId(name) {
@@ -82,7 +91,7 @@
 
   function tokenize(text) {
     const tokens = [];
-    const regex = /[A-Za-z]+(?:'[A-Za-z]+)?/g;
+    const regex = /[A-Za-z]+(?:[_'][A-Za-z]+)*/g;
     let match;
     while ((match = regex.exec(text))) {
       tokens.push({
@@ -250,14 +259,18 @@
           personal: {
             id: "personal",
             name: "Personal",
+            kind: "personal",
             terms: {}
           },
           project: {
             id: "project",
-            name: "Project Context",
+            name: "Project / Topic Context",
+            kind: "project",
             terms: {}
           }
         },
+        properNouns: {},
+        acronyms: {},
         wordBank: {},
         learnedCorrections: {},
         rejectedCorrections: {},
@@ -272,6 +285,8 @@
         if (!parsed || parsed.schemaVersion !== 1) return fallback;
         return Object.assign(fallback, parsed, {
           contextProfiles: this.hydrateContextProfiles(Object.assign(fallback.contextProfiles, parsed.contextProfiles || {})),
+          properNouns: this.hydrateProperNouns(parsed.properNouns || fallback.properNouns),
+          acronyms: this.hydrateAcronyms(parsed.acronyms || fallback.acronyms),
           wordBank: this.hydrateWordBank(parsed.wordBank || fallback.wordBank)
         });
       } catch (error) {
@@ -295,13 +310,32 @@
 
     hydrateContextProfiles(contextProfiles) {
       Object.values(contextProfiles).forEach((context) => {
+        context.kind = context.kind || (context.id === "personal" ? "personal" : "project");
         context.terms = context.terms || {};
         Object.keys(context.terms).forEach((key) => {
           context.terms[key].word = context.terms[key].word || key;
           context.terms[key].displayWord = context.terms[key].displayWord || context.terms[key].word;
+          context.terms[key].relevance = context.terms[key].relevance || "relevant";
         });
       });
       return contextProfiles;
+    }
+
+    hydrateProperNouns(properNouns) {
+      Object.keys(properNouns).forEach((key) => {
+        properNouns[key].word = properNouns[key].word || key;
+        properNouns[key].displayWord = properNouns[key].displayWord || properNouns[key].word;
+      });
+      return properNouns;
+    }
+
+    hydrateAcronyms(acronyms) {
+      Object.keys(acronyms).forEach((key) => {
+        acronyms[key].acronym = acronyms[key].acronym || key.toUpperCase();
+        acronyms[key].topic = acronyms[key].topic || "General";
+        acronyms[key].expansion = acronyms[key].expansion || "";
+      });
+      return acronyms;
     }
 
     hasPersonalWord(word) {
@@ -310,15 +344,30 @@
 
     hasContextTerm(word) {
       const context = this.activeContext();
-      return Boolean(context.terms[normalizeWord(word)]);
+      const entry = context.terms[normalizeWord(word)];
+      return Boolean(entry && entry.relevance !== "irrelevant");
     }
 
     preferredSpelling(word) {
       const key = normalizeWord(word);
       const contextEntry = this.activeContext().terms[key];
+      if (contextEntry && contextEntry.relevance === "irrelevant") return null;
+      const properEntry = this.state.properNouns[key];
+      const acronymEntry = this.state.acronyms[key];
       const personalEntry = this.state.wordBank[key];
-      const entry = contextEntry || personalEntry;
-      return entry && (entry.displayWord || entry.word);
+      const entry = (contextEntry && contextEntry.relevance !== "irrelevant" && contextEntry) || properEntry || personalEntry;
+      return (acronymEntry && acronymEntry.acronym) || (entry && (entry.displayWord || entry.word));
+    }
+
+    isContextIrrelevant(word) {
+      const entry = this.activeContext().terms[normalizeWord(word)];
+      return Boolean(entry && entry.relevance === "irrelevant");
+    }
+
+    hasAcronymExpansionWord(word) {
+      const key = normalizeWord(word);
+      if (!key) return false;
+      return Object.values(this.state.acronyms).some((entry) => tokenize(entry.expansion).some((token) => token.lower === key));
     }
 
     activeContext() {
@@ -345,6 +394,7 @@
       this.state.contextProfiles[id] = {
         id,
         name: cleanName,
+        kind: "topic",
         terms: {}
       };
       this.state.activeContextId = id;
@@ -353,7 +403,7 @@
       return this.state.contextProfiles[id];
     }
 
-    addContextTerm(word, contextId) {
+    addContextTerm(word, contextId, relevance) {
       const key = normalizeWord(word);
       if (!key) return;
       const context = this.state.contextProfiles[contextId || this.state.activeContextId] || this.activeContext();
@@ -361,12 +411,46 @@
         word: key,
         displayWord: String(word).trim(),
         createdAt: nowIso(),
+        relevance: relevance || "relevant",
         count: 0
       };
       context.terms[key].displayWord = String(word).trim() || context.terms[key].displayWord || key;
+      context.terms[key].relevance = relevance || context.terms[key].relevance || "relevant";
       context.terms[key].count += 1;
       this.save();
-      this.log.write("context.term.added", { contextId: context.id, word: key });
+      this.log.write("context.term.added", { contextId: context.id, word: key, relevance: context.terms[key].relevance });
+    }
+
+    addProperNoun(word) {
+      const key = normalizeWord(word);
+      const displayWord = String(word || "").trim();
+      if (!key || !displayWord) return;
+      const existing = this.state.properNouns[key] || {
+        word: key,
+        displayWord,
+        createdAt: nowIso(),
+        count: 0
+      };
+      existing.displayWord = displayWord;
+      existing.count += 1;
+      this.state.properNouns[key] = existing;
+      this.save();
+      this.log.write("proper_noun.added", { word: key });
+    }
+
+    addAcronym(acronym, expansion, topic) {
+      const cleanAcronym = String(acronym || "").trim();
+      const cleanExpansion = String(expansion || "").trim();
+      if (!cleanAcronym || !cleanExpansion) return;
+      const key = cleanAcronym.toLowerCase();
+      this.state.acronyms[key] = {
+        acronym: cleanAcronym.toUpperCase(),
+        expansion: cleanExpansion,
+        topic: String(topic || "").trim() || this.activeContext().name || "General",
+        updatedAt: nowIso()
+      };
+      this.save();
+      this.log.write("acronym.added", { acronym: cleanAcronym.toUpperCase(), topic: this.state.acronyms[key].topic });
     }
 
     isNeverCorrect(word) {
@@ -454,6 +538,8 @@
         const defaults = this.defaultState();
         this.state = Object.assign(defaults, parsed, {
           contextProfiles: this.hydrateContextProfiles(Object.assign(defaults.contextProfiles, parsed.contextProfiles || {})),
+          properNouns: this.hydrateProperNouns(parsed.properNouns || {}),
+          acronyms: this.hydrateAcronyms(parsed.acronyms || {}),
           wordBank: this.hydrateWordBank(parsed.wordBank || {}),
           rejectedCorrections: parsed.rejectedCorrections || {}
         });
@@ -489,7 +575,7 @@
 
     isKnown(word) {
       const key = normalizeWord(word);
-      return this.dictionary.has(key) || this.store.hasPersonalWord(key) || this.store.hasContextTerm(key);
+      return this.dictionary.has(key) || this.store.hasPersonalWord(key) || this.store.hasContextTerm(key) || this.store.hasAcronymExpansionWord(key);
     }
 
     check(text) {
@@ -534,6 +620,7 @@
         ...Object.keys(learned),
         ...this.dictionary,
         ...Object.values(this.store.state.wordBank).map((entry) => entry.displayWord || entry.word),
+        ...Object.values(this.store.state.properNouns).map((entry) => entry.displayWord || entry.word),
         ...Object.values(this.store.activeContext().terms).map((entry) => entry.displayWord || entry.word)
       ].filter(Boolean));
 
@@ -554,6 +641,13 @@
 
     scoreCandidate(malformed, candidate, tokens, index, learned) {
       const candidateKey = normalizeWord(candidate);
+      if (this.store.isContextIrrelevant(candidateKey)) {
+        return {
+          word: candidate,
+          score: 0,
+          reason: "irrelevant in active context"
+        };
+      }
       const distance = damerauLevenshtein(malformed, candidateKey);
       const length = Math.max(malformed.length, candidateKey.length);
       let score = Math.max(0, 1 - distance / Math.max(1, length));
@@ -670,6 +764,14 @@
         input.value = "";
         this.renderAll();
       });
+      this.byId("add-proper-noun-form").addEventListener("submit", (event) => {
+        event.preventDefault();
+        const input = this.byId("new-proper-noun");
+        this.store.addProperNoun(input.value);
+        input.value = "";
+        this.check();
+        this.renderAll();
+      });
       this.byId("add-context-form").addEventListener("submit", (event) => {
         event.preventDefault();
         const input = this.byId("new-context-name");
@@ -681,10 +783,23 @@
       this.byId("add-context-term-form").addEventListener("submit", (event) => {
         event.preventDefault();
         const input = this.byId("new-context-term");
+        const relevance = this.byId("new-context-relevance").value;
         const targetContext = this.store.state.activeContextId === "personal" ? "project" : this.store.state.activeContextId;
-        this.store.addContextTerm(input.value, targetContext);
+        this.store.addContextTerm(input.value, targetContext, relevance);
         if (this.store.state.activeContextId === "personal") this.store.setActiveContext(targetContext);
         input.value = "";
+        this.check();
+        this.renderAll();
+      });
+      this.byId("add-acronym-form").addEventListener("submit", (event) => {
+        event.preventDefault();
+        const acronym = this.byId("new-acronym");
+        const expansion = this.byId("new-acronym-expansion");
+        const topic = this.byId("new-acronym-topic");
+        this.store.addAcronym(acronym.value, expansion.value, topic.value);
+        acronym.value = "";
+        expansion.value = "";
+        topic.value = "";
         this.check();
         this.renderAll();
       });
@@ -703,7 +818,9 @@
       this.renderContextOptions();
       this.byId("context-mode").value = this.store.state.activeContextId;
       this.renderWordBank();
+      this.renderProperNouns();
       this.renderContextBank();
+      this.renderAcronyms();
       this.renderDiagnostics();
       this.renderSuggestions();
     }
@@ -869,7 +986,7 @@
         : this.store.activeContext();
       const entries = Object.values(context.terms).sort((a, b) => a.word.localeCompare(b.word));
       if (!entries.length) {
-        container.innerHTML = '<div class="empty-state">No project terms yet.</div>';
+        container.innerHTML = '<div class="empty-state">No topic or project terms yet.</div>';
         return;
       }
       container.innerHTML = "";
@@ -878,9 +995,57 @@
         node.className = "word-item";
         node.innerHTML = `
           <div class="word-title"><span>${this.escape(entry.displayWord || entry.word)}</span><span class="badge">Context</span></div>
-          <p>Active in ${this.escape(context.name)}. Seen ${entry.count} time${entry.count === 1 ? "" : "s"}.</p>
+          <p>${this.escape(entry.relevance || "relevant")} in ${this.escape(context.name)}. Seen ${entry.count} time${entry.count === 1 ? "" : "s"}.</p>
           <div class="word-actions">
             <button data-action="define" data-word="${this.escape(entry.displayWord || entry.word)}" type="button">Define</button>
+          </div>
+        `;
+        node.addEventListener("click", (event) => this.onWordClick(event));
+        container.appendChild(node);
+      });
+    }
+
+    renderProperNouns() {
+      const container = this.byId("proper-nouns");
+      const entries = Object.values(this.store.state.properNouns).sort((a, b) => a.word.localeCompare(b.word));
+      if (!entries.length) {
+        container.innerHTML = '<div class="empty-state">No proper nouns yet.</div>';
+        return;
+      }
+      container.innerHTML = "";
+      entries.forEach((entry) => {
+        const node = this.document.createElement("article");
+        node.className = "word-item";
+        node.innerHTML = `
+          <div class="word-title"><span>${this.escape(entry.displayWord || entry.word)}</span><span class="badge">Proper noun</span></div>
+          <p>Preferred capitalization. Seen ${entry.count} time${entry.count === 1 ? "" : "s"}.</p>
+          <div class="word-actions">
+            <button data-action="define" data-word="${this.escape(entry.displayWord || entry.word)}" type="button">Define</button>
+          </div>
+        `;
+        node.addEventListener("click", (event) => this.onWordClick(event));
+        container.appendChild(node);
+      });
+    }
+
+    renderAcronyms() {
+      const container = this.byId("acronyms");
+      const entries = Object.values(this.store.state.acronyms).sort((a, b) => {
+        return a.topic.localeCompare(b.topic) || a.acronym.localeCompare(b.acronym);
+      });
+      if (!entries.length) {
+        container.innerHTML = '<div class="empty-state">No acronyms yet.</div>';
+        return;
+      }
+      container.innerHTML = "";
+      entries.forEach((entry) => {
+        const node = this.document.createElement("article");
+        node.className = "word-item";
+        node.innerHTML = `
+          <div class="word-title"><span>${this.escape(entry.acronym)}</span><span class="badge">${this.escape(entry.topic)}</span></div>
+          <p>${this.escape(entry.expansion)}</p>
+          <div class="word-actions">
+            <button data-action="expand-acronym" data-acronym="${this.escape(entry.acronym)}" data-expansion="${this.escape(entry.expansion)}" type="button">Expand</button>
           </div>
         `;
         node.addEventListener("click", (event) => this.onWordClick(event));
@@ -894,11 +1059,24 @@
       const word = button.dataset.word;
       if (button.dataset.action === "favorite") this.store.toggleFavorite(word);
       if (button.dataset.action === "never") this.store.markNeverCorrect(word);
+      if (button.dataset.action === "expand-acronym") {
+        this.expandAcronym(button.dataset.acronym, button.dataset.expansion);
+      }
       if (button.dataset.action === "define") {
         this.log.write("definition.opened", { word });
         window.open(`https://www.merriam-webster.com/dictionary/${encodeURIComponent(word)}`, "_blank", "noopener");
       }
       this.renderAll();
+    }
+
+    expandAcronym(acronym, expansion) {
+      const input = this.byId("input-text");
+      const escaped = acronym.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const expanded = `${acronym} (${expansion})`;
+      const regex = new RegExp(`\\b${escaped}\\b`, "i");
+      input.value = regex.test(input.value) ? input.value.replace(regex, expanded) : `${input.value.trim()} ${expanded}`.trim();
+      this.log.write("acronym.expanded", { acronym });
+      this.check();
     }
 
     renderDiagnostics() {
