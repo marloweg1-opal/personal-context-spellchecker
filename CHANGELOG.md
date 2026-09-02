@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1 - 2026-09-02
+
+- Fixed `launch.ps1` so PowerShell accepts its `param` block.
+
 ## 0.1.0 - 2026-09-02
 
 - Built the first usable vertical slice.

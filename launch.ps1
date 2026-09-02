@@ -1,8 +1,8 @@
-$ErrorActionPreference = "Stop"
-
 param(
     [int]$Port = 8765
 )
+
+$ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location -LiteralPath $root
