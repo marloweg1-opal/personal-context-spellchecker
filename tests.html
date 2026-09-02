@@ -28,6 +28,7 @@
       <input id="state-file" type="file">
       <button id="check-text"></button>
       <form id="add-word-form"><input id="new-word"></form>
+      <form id="add-context-form"><input id="new-context-name"></form>
       <form id="add-context-term-form"><input id="new-context-term"></form>
       <textarea id="input-text"></textarea>
       <span id="status-line"></span>
@@ -91,6 +92,18 @@
         issues = engine.check("Solara is scoped.");
         assert("honors project context terms", issues.length === 0);
 
+        const hexseed = store.createContextProfile("HEXSEED");
+        store.addContextTerm("Libra", hexseed.id);
+        assert("creates titled project word banks", store.state.contextProfiles[hexseed.id].name === "HEXSEED");
+        issues = engine.check("libra is a proper noun here.");
+        assert("proper nouns can auto-capitalize from project bank", issues.some((issue) => issue.raw === "libra" && issue.suggestion === "Libra"));
+        assert("proper noun replacement preserves stored casing", api.applyCorrectionsToText("libra", [issues.find((issue) => issue.raw === "libra")]) === "Libra");
+
+        const careBloom = store.createContextProfile("CareBloomOS");
+        store.addContextTerm("Heartstone", careBloom.id);
+        issues = engine.check("heartstone belongs in this project.");
+        assert("project bank proper nouns preserve camel casing", issues.some((issue) => issue.raw === "heartstone" && issue.suggestion === "Heartstone"));
+
         store.markNeverCorrect("teh");
         issues = engine.check("teh is intentionally mine.");
         assert("honors never correct", issues.length === 0);
@@ -120,7 +133,8 @@
         const importedLog = new api.DiagnosticLog(window.localStorage);
         const importedStore = new api.SpellStore(window.localStorage, importedLog);
         importedStore.importState(exported);
-        assert("state export/import round-trips", importedStore.hasPersonalWord("Runevale") && importedStore.hasContextTerm("Solara"));
+        const importedContexts = Object.values(importedStore.state.contextProfiles);
+        assert("state export/import round-trips", importedStore.hasPersonalWord("Runevale") && importedContexts.some((context) => context.terms.solara));
 
         assert("writes diagnostics", log.events.length > 0);
         output.textContent = lines.join("\n");

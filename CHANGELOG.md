@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0 - 2026-09-02
+
+- Added titled project word banks.
+- Added preferred capitalization suggestions for stored personal and project terms.
+
 ## 0.2.0 - 2026-09-02
 
 - Added thought-level suggestion grouping with one `Accept All` action per sentence or coherent thought.

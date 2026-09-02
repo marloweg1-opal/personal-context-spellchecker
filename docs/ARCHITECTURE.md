@@ -1,12 +1,12 @@
 # Architecture
 
-Version: 0.2.0
+Version: 0.3.0
 
 ## Component Boundaries
 
 - `SpellEngine`: pure-ish correction logic. It owns token analysis, dictionary checks, candidate generation, edit-distance scoring, context bonuses, and learned-correction weighting.
 - `SpellStore`: the only owner of mutable user state. It persists the personal word bank, favorite flags, never-correct flags, learned correction counts, rejection counts, and typo-pattern counters.
-- `ContextProfile`: a scoped vocabulary layer for a writing context or project. It can prevent false positives and participate in candidate ranking without becoming permanent personal vocabulary.
+- `ContextProfile`: a named scoped vocabulary layer for a writing context or project. It can prevent false positives, preserve preferred capitalization, and participate in candidate ranking without becoming permanent personal vocabulary.
 - `DiagnosticLog`: append-style event log with capped local retention and JSONL export.
 - `Presenter`: personality layer. It formats suggestion copy only; it never changes detection, ranking, confidence, or accepted correction data.
 - `AppController`: DOM glue. It translates clicks into store/engine operations and renders current state.

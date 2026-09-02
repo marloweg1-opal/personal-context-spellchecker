@@ -35,7 +35,6 @@
             <label class="select-label" for="context-mode">Context</label>
             <select id="context-mode">
               <option value="personal">Personal</option>
-              <option value="project">Project Context</option>
             </select>
             <label class="select-label" for="personality">Personality</label>
             <select id="personality">
@@ -69,9 +68,13 @@
       <section class="context-section" aria-label="Project context">
         <div class="panel-head">
           <div>
-            <h2>Project Context</h2>
-            <span>Scoped names and terms for the current writing context.</span>
+            <h2>Project Word Banks</h2>
+            <span>Scoped names, terms, and preferred capitalization for the current writing context.</span>
           </div>
+          <form id="add-context-form" class="add-word-form" aria-label="Create project word bank">
+            <input id="new-context-name" type="text" autocomplete="off" placeholder="New bank title">
+            <button type="submit">Create</button>
+          </form>
           <form id="add-context-term-form" class="add-word-form" aria-label="Add project context term">
             <input id="new-context-term" type="text" autocomplete="off" placeholder="Add a project term">
             <button type="submit">Add</button>

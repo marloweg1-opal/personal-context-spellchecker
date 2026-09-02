@@ -1,14 +1,14 @@
 (function () {
   "use strict";
 
-  const APP_VERSION = "0.2.0";
+  const APP_VERSION = "0.3.0";
   const STORAGE_KEY = "personal-contextual-spellchecker/state/v1";
   const LOG_KEY = "personal-contextual-spellchecker/logs/v1";
 
   const SEED_WORDS = [
     "a", "able", "about", "accept", "accommodate", "across", "actually", "address", "again",
     "agent", "almost", "already", "also", "although", "always", "analysis", "and", "another",
-    "app", "architecture", "area", "around", "because", "before", "beginning", "bank", "belong",
+    "app", "architecture", "are", "area", "around", "because", "before", "beginning", "bank", "belong",
     "belongs", "build",
     "calendar", "candidate", "change", "check", "clean", "clickable", "code", "component",
     "context", "contextual", "correction", "correct", "custom", "decision", "definition",
@@ -18,8 +18,8 @@
     "hope", "hoping", "hopping", "i've", "infer", "intended", "into", "is", "it", "issue", "jargon", "learn", "likely", "local",
     "logic", "logs", "maintain", "maintainability", "malformed", "mode", "my", "name", "names", "never",
     "not", "note", "observability", "of", "one", "optionally", "over", "persistent", "personal",
-    "personality", "popular", "preferred", "present", "private", "production", "profile", "project", "receive",
-    "recovery", "recurring", "rename", "report", "reset", "rewriting", "scoped", "security", "sentence", "separate",
+    "noun", "nouns", "personality", "popular", "preferred", "present", "private", "production", "profile", "project", "proper", "receive",
+    "ready", "recovery", "recurring", "rename", "report", "reset", "rewriting", "scoped", "security", "sentence", "separate",
     "ship", "signature", "small", "source", "spellchecker", "spelling", "state", "stopped", "suggestion", "surface",
     "teasing", "testability", "the", "their", "there", "this", "thought", "through", "token",
     "to", "tone", "topic", "useful", "user", "versioning", "vertical", "want", "we", "what", "word", "working", "works", "would", "write",
@@ -71,6 +71,15 @@
     return String(word || "").toLowerCase().replace(/^[^a-z']+|[^a-z']+$/g, "");
   }
 
+  function makeContextId(name) {
+    const slug = String(name || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    return slug || `project-${Date.now()}`;
+  }
+
   function tokenize(text) {
     const tokens = [];
     const regex = /[A-Za-z]+(?:'[A-Za-z]+)?/g;
@@ -105,12 +114,16 @@
     return spans;
   }
 
+  function replacementForIssue(issue) {
+    return issue.preserveSuggestionCase ? issue.suggestion : matchCase(issue.raw, issue.suggestion);
+  }
+
   function applyCorrectionsToText(text, issues) {
     return issues
       .slice()
       .sort((a, b) => b.start - a.start)
       .reduce((nextText, issue) => {
-        const replacement = matchCase(issue.raw, issue.suggestion);
+        const replacement = replacementForIssue(issue);
         return nextText.slice(0, issue.start) + replacement + nextText.slice(issue.end);
       }, text);
   }
@@ -258,7 +271,8 @@
         const parsed = JSON.parse(this.storage.getItem(STORAGE_KEY));
         if (!parsed || parsed.schemaVersion !== 1) return fallback;
         return Object.assign(fallback, parsed, {
-          contextProfiles: Object.assign(fallback.contextProfiles, parsed.contextProfiles || {})
+          contextProfiles: this.hydrateContextProfiles(Object.assign(fallback.contextProfiles, parsed.contextProfiles || {})),
+          wordBank: this.hydrateWordBank(parsed.wordBank || fallback.wordBank)
         });
       } catch (error) {
         this.log.write("recovery.state.corrupt", { error: String(error) });
@@ -271,6 +285,25 @@
       this.storage.setItem(STORAGE_KEY, JSON.stringify(this.state));
     }
 
+    hydrateWordBank(wordBank) {
+      Object.keys(wordBank).forEach((key) => {
+        wordBank[key].word = wordBank[key].word || key;
+        wordBank[key].displayWord = wordBank[key].displayWord || wordBank[key].word;
+      });
+      return wordBank;
+    }
+
+    hydrateContextProfiles(contextProfiles) {
+      Object.values(contextProfiles).forEach((context) => {
+        context.terms = context.terms || {};
+        Object.keys(context.terms).forEach((key) => {
+          context.terms[key].word = context.terms[key].word || key;
+          context.terms[key].displayWord = context.terms[key].displayWord || context.terms[key].word;
+        });
+      });
+      return contextProfiles;
+    }
+
     hasPersonalWord(word) {
       return Boolean(this.state.wordBank[normalizeWord(word)]);
     }
@@ -278,6 +311,14 @@
     hasContextTerm(word) {
       const context = this.activeContext();
       return Boolean(context.terms[normalizeWord(word)]);
+    }
+
+    preferredSpelling(word) {
+      const key = normalizeWord(word);
+      const contextEntry = this.activeContext().terms[key];
+      const personalEntry = this.state.wordBank[key];
+      const entry = contextEntry || personalEntry;
+      return entry && (entry.displayWord || entry.word);
     }
 
     activeContext() {
@@ -291,15 +332,38 @@
       this.log.write("context.changed", { contextId });
     }
 
+    createContextProfile(name) {
+      const cleanName = String(name || "").trim();
+      if (!cleanName) return null;
+      const baseId = makeContextId(cleanName);
+      let id = baseId;
+      let suffix = 2;
+      while (this.state.contextProfiles[id]) {
+        id = `${baseId}-${suffix}`;
+        suffix += 1;
+      }
+      this.state.contextProfiles[id] = {
+        id,
+        name: cleanName,
+        terms: {}
+      };
+      this.state.activeContextId = id;
+      this.save();
+      this.log.write("context.created", { contextId: id, name: cleanName });
+      return this.state.contextProfiles[id];
+    }
+
     addContextTerm(word, contextId) {
       const key = normalizeWord(word);
       if (!key) return;
       const context = this.state.contextProfiles[contextId || this.state.activeContextId] || this.activeContext();
       context.terms[key] = context.terms[key] || {
         word: key,
+        displayWord: String(word).trim(),
         createdAt: nowIso(),
         count: 0
       };
+      context.terms[key].displayWord = String(word).trim() || context.terms[key].displayWord || key;
       context.terms[key].count += 1;
       this.save();
       this.log.write("context.term.added", { contextId: context.id, word: key });
@@ -315,11 +379,13 @@
       if (!key) return;
       const existing = this.state.wordBank[key] || {
         word: key,
+        displayWord: String(word).trim(),
         createdAt: nowIso(),
         count: 0,
         favorite: false,
         neverCorrect: false
       };
+      existing.displayWord = String(word).trim() || existing.displayWord || key;
       existing.count += 1;
       existing.source = source || existing.source || "manual";
       this.state.wordBank[key] = existing;
@@ -387,7 +453,8 @@
       try {
         const defaults = this.defaultState();
         this.state = Object.assign(defaults, parsed, {
-          contextProfiles: Object.assign(defaults.contextProfiles, parsed.contextProfiles || {}),
+          contextProfiles: this.hydrateContextProfiles(Object.assign(defaults.contextProfiles, parsed.contextProfiles || {})),
+          wordBank: this.hydrateWordBank(parsed.wordBank || {}),
           rejectedCorrections: parsed.rejectedCorrections || {}
         });
         this.save();
@@ -429,6 +496,11 @@
       const tokens = tokenize(text);
       const issues = [];
       tokens.forEach((token, index) => {
+        const casingSuggestion = this.suggestPreferredCasing(token);
+        if (casingSuggestion) {
+          issues.push(Object.assign({}, token, casingSuggestion));
+          return;
+        }
         if (token.lower.length < 2 || this.store.isNeverCorrect(token.lower) || this.isKnown(token.lower)) {
           return;
         }
@@ -443,14 +515,26 @@
       return issues;
     }
 
+    suggestPreferredCasing(token) {
+      const preferred = this.store.preferredSpelling(token.raw);
+      if (!preferred || preferred === token.raw || preferred.toLowerCase() === preferred) return null;
+      return {
+        suggestion: preferred,
+        confidence: 0.99,
+        reason: "preferred capitalization",
+        alternatives: [],
+        preserveSuggestionCase: true
+      };
+    }
+
     suggest(token, tokens, index) {
       const learned = this.store.state.learnedCorrections[token.lower] || {};
       const candidates = new Set([
         CONFUSION_PAIRS[token.lower],
         ...Object.keys(learned),
         ...this.dictionary,
-        ...Object.keys(this.store.state.wordBank),
-        ...Object.keys(this.store.activeContext().terms)
+        ...Object.values(this.store.state.wordBank).map((entry) => entry.displayWord || entry.word),
+        ...Object.values(this.store.activeContext().terms).map((entry) => entry.displayWord || entry.word)
       ].filter(Boolean));
 
       const ranked = Array.from(candidates)
@@ -469,34 +553,35 @@
     }
 
     scoreCandidate(malformed, candidate, tokens, index, learned) {
-      const distance = damerauLevenshtein(malformed, candidate);
-      const length = Math.max(malformed.length, candidate.length);
+      const candidateKey = normalizeWord(candidate);
+      const distance = damerauLevenshtein(malformed, candidateKey);
+      const length = Math.max(malformed.length, candidateKey.length);
       let score = Math.max(0, 1 - distance / Math.max(1, length));
       const reasons = [`edit distance ${distance}`];
 
-      if (CONFUSION_PAIRS[malformed] === candidate) {
+      if (CONFUSION_PAIRS[malformed] === candidateKey) {
         score += 0.32;
         reasons.push("known confusion");
       }
 
-      if (learned[candidate]) {
-        score += Math.min(0.28, learned[candidate] * 0.08);
+      if (learned[candidateKey]) {
+        score += Math.min(0.28, learned[candidateKey] * 0.08);
         reasons.push("learned from you");
       }
 
-      const rejected = (this.store.state.rejectedCorrections[malformed] || {})[candidate] || 0;
+      const rejected = (this.store.state.rejectedCorrections[malformed] || {})[candidateKey] || 0;
       if (rejected) {
         score -= Math.min(0.28, rejected * 0.08);
         reasons.push("previously rejected");
       }
 
-      const contextBonus = this.contextScore(candidate, tokens, index);
+      const contextBonus = this.contextScore(candidateKey, tokens, index);
       if (contextBonus > 0) {
         score += contextBonus;
         reasons.push("context fit");
       }
 
-      if (Math.abs(candidate.length - malformed.length) > 3) score -= 0.15;
+      if (Math.abs(candidateKey.length - malformed.length) > 3) score -= 0.15;
 
       return {
         word: candidate,
@@ -585,11 +670,20 @@
         input.value = "";
         this.renderAll();
       });
+      this.byId("add-context-form").addEventListener("submit", (event) => {
+        event.preventDefault();
+        const input = this.byId("new-context-name");
+        this.store.createContextProfile(input.value);
+        input.value = "";
+        this.check();
+        this.renderAll();
+      });
       this.byId("add-context-term-form").addEventListener("submit", (event) => {
         event.preventDefault();
         const input = this.byId("new-context-term");
-        this.store.addContextTerm(input.value, "project");
-        this.store.setActiveContext("project");
+        const targetContext = this.store.state.activeContextId === "personal" ? "project" : this.store.state.activeContextId;
+        this.store.addContextTerm(input.value, targetContext);
+        if (this.store.state.activeContextId === "personal") this.store.setActiveContext(targetContext);
         input.value = "";
         this.check();
         this.renderAll();
@@ -606,11 +700,25 @@
     }
 
     renderAll() {
+      this.renderContextOptions();
       this.byId("context-mode").value = this.store.state.activeContextId;
       this.renderWordBank();
       this.renderContextBank();
       this.renderDiagnostics();
       this.renderSuggestions();
+    }
+
+    renderContextOptions() {
+      const select = this.byId("context-mode");
+      const selected = this.store.state.activeContextId;
+      select.innerHTML = "";
+      Object.values(this.store.state.contextProfiles).forEach((context) => {
+        const option = this.document.createElement("option");
+        option.value = context.id;
+        option.textContent = context.name;
+        select.appendChild(option);
+      });
+      select.value = selected;
     }
 
     renderSuggestions() {
@@ -690,7 +798,7 @@
 
     acceptIssue(issue) {
       const input = this.byId("input-text");
-      input.value = input.value.slice(0, issue.start) + matchCase(issue.raw, issue.suggestion) + input.value.slice(issue.end);
+      input.value = input.value.slice(0, issue.start) + replacementForIssue(issue) + input.value.slice(issue.end);
       this.store.learnCorrection(issue.raw, issue.suggestion);
     }
 
@@ -741,12 +849,12 @@
           entry.neverCorrect ? '<span class="badge never">Never correct</span>' : '<span class="badge">Personal</span>'
         ].join("");
         node.innerHTML = `
-          <div class="word-title"><span>${this.escape(entry.word)}</span><span>${badges}</span></div>
+          <div class="word-title"><span>${this.escape(entry.displayWord || entry.word)}</span><span>${badges}</span></div>
           <p>Seen ${entry.count} time${entry.count === 1 ? "" : "s"}. Source: ${this.escape(entry.source || "manual")}.</p>
           <div class="word-actions">
-            <button data-action="favorite" data-word="${this.escape(entry.word)}" type="button">${entry.favorite ? "Unfavorite" : "Favorite"}</button>
-            <button data-action="never" data-word="${this.escape(entry.word)}" type="button">Never Correct</button>
-            <button data-action="define" data-word="${this.escape(entry.word)}" type="button">Define</button>
+            <button data-action="favorite" data-word="${this.escape(entry.displayWord || entry.word)}" type="button">${entry.favorite ? "Unfavorite" : "Favorite"}</button>
+            <button data-action="never" data-word="${this.escape(entry.displayWord || entry.word)}" type="button">Never Correct</button>
+            <button data-action="define" data-word="${this.escape(entry.displayWord || entry.word)}" type="button">Define</button>
           </div>
         `;
         node.addEventListener("click", (event) => this.onWordClick(event));
@@ -756,7 +864,9 @@
 
     renderContextBank() {
       const container = this.byId("context-bank");
-      const context = this.store.state.contextProfiles.project;
+      const context = this.store.state.activeContextId === "personal"
+        ? this.store.state.contextProfiles.project
+        : this.store.activeContext();
       const entries = Object.values(context.terms).sort((a, b) => a.word.localeCompare(b.word));
       if (!entries.length) {
         container.innerHTML = '<div class="empty-state">No project terms yet.</div>';
@@ -767,10 +877,10 @@
         const node = this.document.createElement("article");
         node.className = "word-item";
         node.innerHTML = `
-          <div class="word-title"><span>${this.escape(entry.word)}</span><span class="badge">Context</span></div>
+          <div class="word-title"><span>${this.escape(entry.displayWord || entry.word)}</span><span class="badge">Context</span></div>
           <p>Active in ${this.escape(context.name)}. Seen ${entry.count} time${entry.count === 1 ? "" : "s"}.</p>
           <div class="word-actions">
-            <button data-action="define" data-word="${this.escape(entry.word)}" type="button">Define</button>
+            <button data-action="define" data-word="${this.escape(entry.displayWord || entry.word)}" type="button">Define</button>
           </div>
         `;
         node.addEventListener("click", (event) => this.onWordClick(event));
@@ -824,6 +934,7 @@
     thoughtSpans,
     groupIssuesByThought,
     applyCorrectionsToText,
+    replacementForIssue,
     damerauLevenshtein,
     DiagnosticLog,
     SpellStore,

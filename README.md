@@ -26,7 +26,8 @@ Included:
 - `SpellEngine` detection and intended-word ranking.
 - `SpellStore` state owner backed by `localStorage`.
 - Persistent word bank with favorite and never-correct flags.
-- Project Context mode with scoped project terms.
+- Titled project word banks with scoped project terms.
+- Preferred capitalization for proper nouns, such as project names or named concepts.
 - Learned correction counts per malformed token.
 - Rejection feedback that reduces confidence for repeated bad suggestions.
 - Thought-level suggestion cards with one `Accept All` action per sentence or coherent thought.
