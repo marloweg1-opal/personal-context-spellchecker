@@ -24,6 +24,10 @@ Smoke tests use in-memory storage and must not write to the live app's `localSto
 
 Use GitHub commits for meaningful checkpoints. Create a version tag and release snapshot after roughly 10 significant changes, or sooner for a user-visible bugfix, data recovery fix, or demo milestone.
 
+## Handoff
+
+See `docs/ARK_HANDOFF.md` for the current ARK-facing project handoff, including the difference between text occurrence searches and reading code context.
+
 ## MVP Scope
 
 Included:
