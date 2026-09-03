@@ -5,6 +5,8 @@
 - Added startup cleanup for known leaked smoke-test fixtures from older test runs.
 - Added a regression test proving smoke-test fixture cleanup does not remove real manual words.
 - Documented the code-audit result and release cadence.
+- Removed undeveloped personality presentation modes from the MVP surface.
+- Documented the planned real-time autocorrect path with confidence, marking, and undo guardrails.
 
 ## 0.4.2 - 2026-09-02
 

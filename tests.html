@@ -18,7 +18,6 @@
     </main>
 
     <div hidden>
-      <select id="personality"><option value="direct">Direct</option></select>
       <select id="context-mode"><option value="personal">Personal</option><option value="project">Project Context</option></select>
       <button id="export-state"></button>
       <button id="import-state"></button>
@@ -167,14 +166,6 @@
         store.rejectCorrection("speling", "spelling");
         const afterReject = engine.suggest({ lower: "speling" }, api.tokenize("speling matters."), 0).confidence;
         assert("rejection reduces learned correction confidence", afterReject < beforeReject);
-
-        const neutralPresenter = new api.Presenter({ value: "direct" });
-        const popularPresenter = new api.Presenter({ value: "popularGirl" });
-        const decision = engine.check("signiture again.")[0];
-        const stableSuggestion = decision.suggestion;
-        neutralPresenter.message(decision);
-        popularPresenter.message(decision);
-        assert("personality cannot alter correction results", decision.suggestion === stableSuggestion);
 
         const privateSentence = "I've had enoweg of this.";
         engine.check(privateSentence);

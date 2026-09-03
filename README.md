@@ -1,6 +1,6 @@
 # Personal Contextual Spellchecker
 
-Small local-first MVP for spelling correction. It detects likely misspellings, ranks intended-word suggestions with token similarity plus surrounding context, learns accepted corrections, persists a personal word bank, supports favorites and "never correct this", exposes definition links, and keeps personality separate from correction logic.
+Small local-first MVP for spelling correction. It detects likely misspellings, ranks intended-word suggestions with token similarity plus surrounding context, learns accepted corrections, persists a personal word bank, supports favorites and "never correct this", and exposes definition links.
 
 The "personal" part means the app learns the user's recurring misspellings, preferred corrections, private vocabulary, names, projects, nicknames, and deliberate spellings over time. It is not tied to any one workspace or subject area.
 
@@ -41,7 +41,6 @@ Included:
 - Thought-level suggestion cards with one `Accept All` action per sentence or coherent thought.
 - Diagnostic events stored as JSONL-compatible records.
 - Export/import for state and export/clear for logs.
-- Personality presentation modes, including `Popular Girl`, isolated from correction logic.
 - Clickable definition action through Merriam-Webster lookup.
 
 Not included:
@@ -52,6 +51,8 @@ Not included:
 - Writing coaching.
 - Generative rewriting.
 - Cloud sync.
+- Personality modes.
+- Real-time autocorrect.
 
 ## Extension Status
 

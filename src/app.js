@@ -19,7 +19,7 @@
     "hope", "hoping", "hopping", "how", "i've", "infer", "intended", "into", "is", "it", "issue", "jargon", "know", "learn", "likely", "local",
     "logic", "logs", "maintain", "maintainability", "malformed", "mini_ark", "mode", "my", "name", "names", "never",
     "not", "note", "observability", "occurrence", "of", "one", "optionally", "over", "persistent", "personal",
-    "noun", "nouns", "personality", "popular", "preferred", "present", "private", "production", "profile", "project", "proper", "receive",
+    "noun", "nouns", "preferred", "present", "private", "production", "profile", "project", "proper", "receive",
     "ready", "recovery", "recurring", "rename", "report", "reset", "rewriting", "scoped", "security", "sentence", "separate",
     "ship", "signature", "small", "source", "spellchecker", "spelling", "state", "stopped", "suggestion", "surface",
     "teasing", "testability", "the", "their", "there", "this", "thought", "through", "token",
@@ -73,8 +73,7 @@
     ["source", "control"],
     ["dependency", "boundaries"],
     ["surrounding", "sentence"],
-    ["correction", "logic"],
-    ["popular", "girl"]
+    ["correction", "logic"]
   ];
 
   function nowIso() {
@@ -725,30 +724,12 @@
     }
   }
 
-  class Presenter {
-    constructor(select) {
-      this.select = select;
-    }
-
-    message(issue) {
-      const mode = this.select.value;
-      if (mode === "popularGirl") {
-        return `Pretty sure "${issue.raw}" meant "${issue.suggestion}". Tiny typo moment, we recover.`;
-      }
-      if (mode === "quiet") {
-        return `"${issue.raw}" -> "${issue.suggestion}"`;
-      }
-      return `Likely correction: "${issue.raw}" -> "${issue.suggestion}".`;
-    }
-  }
-
   class AppController {
     constructor(documentRef, storage) {
       this.document = documentRef;
       this.log = new DiagnosticLog(storage);
       this.store = new SpellStore(storage, this.log);
       this.engine = new SpellEngine(this.store, this.log);
-      this.presenter = new Presenter(this.byId("personality"));
       this.currentIssues = [];
       this.currentGroups = [];
       this.bind();
@@ -763,7 +744,6 @@
 
     bind() {
       this.byId("check-text").addEventListener("click", () => this.check());
-      this.byId("personality").addEventListener("change", () => this.renderSuggestions());
       this.byId("context-mode").addEventListener("change", (event) => {
         this.store.setActiveContext(event.target.value);
         this.check();
@@ -881,7 +861,7 @@
           const alternatives = issue.alternatives.length ? ` Alternatives: ${issue.alternatives.join(", ")}.` : "";
           return `
             <div class="suggestion-row">
-              <strong>${this.escape(this.presenter.message(issue))}</strong>
+              <strong>Likely correction: "${this.escape(issue.raw)}" -> "${this.escape(issue.suggestion)}".</strong>
               <p class="suggestion-meta"><span class="confidence">${Math.round(issue.confidence * 100)}%</span> confidence. ${this.escape(issue.reason)}.${this.escape(alternatives)}</p>
               <div class="suggestion-actions">
                 <button data-action="accept" data-index="${issueIndex}" type="button">Accept</button>
@@ -1143,7 +1123,6 @@
     DiagnosticLog,
     SpellStore,
     SpellEngine,
-    Presenter,
     AppController
   };
 
