@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const APP_VERSION = "0.4.0";
+  const APP_VERSION = "0.4.1";
   const STORAGE_KEY = "personal-contextual-spellchecker/state/v1";
   const LOG_KEY = "personal-contextual-spellchecker/logs/v1";
 
@@ -13,11 +13,12 @@
     "calendar", "candidate", "change", "check", "clean", "clickable", "code", "component",
     "context", "contextual", "correction", "correct", "custom", "decision", "definition",
     "definitely", "dependency", "deployment", "detect", "diagnostic", "dictionary", "does",
+    "don't",
     "during", "each", "engine", "enough", "eventually", "every", "extension", "favorite", "favorited",
     "deliberate", "fix", "folder", "from", "general", "generative", "grammar", "guess", "had", "help",
-    "hope", "hoping", "hopping", "i've", "infer", "intended", "into", "is", "it", "issue", "jargon", "learn", "likely", "local",
+    "hope", "hoping", "hopping", "how", "i've", "infer", "intended", "into", "is", "it", "issue", "jargon", "know", "learn", "likely", "local",
     "logic", "logs", "maintain", "maintainability", "malformed", "mini_ark", "mode", "my", "name", "names", "never",
-    "not", "note", "observability", "of", "one", "optionally", "over", "persistent", "personal",
+    "not", "note", "observability", "occurrence", "of", "one", "optionally", "over", "persistent", "personal",
     "noun", "nouns", "personality", "popular", "preferred", "present", "private", "production", "profile", "project", "proper", "receive",
     "ready", "recovery", "recurring", "rename", "report", "reset", "rewriting", "scoped", "security", "sentence", "separate",
     "ship", "signature", "small", "source", "spellchecker", "spelling", "state", "stopped", "suggestion", "surface",
@@ -47,6 +48,10 @@
     irrelavant: "irrelevant",
     seperate: "separate",
     occured: "occurred",
+    ocurance: "occurrence",
+    occurance: "occurrence",
+    ocurrance: "occurrence",
+    occurence: "occurrence",
     untill: "until",
     wierd: "weird",
     adress: "address",

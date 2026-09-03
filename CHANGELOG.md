@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.1 - 2026-09-02
+
+- Added common `occurrence` misspelling coverage.
+- Added ordinary-word coverage around the sample phrase `don't know how`.
+
 ## 0.4.0 - 2026-09-02
 
 - Added global proper noun capitalization separate from topic/project context.

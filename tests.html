@@ -86,6 +86,9 @@
         assert("covers required fixture begining", issues.some((issue) => issue.suggestion === "beginning"));
         assert("covers required fixture stoped", issues.some((issue) => issue.suggestion === "stopped"));
         assert("covers required fixture wht", issues.some((issue) => issue.suggestion === "what"));
+        issues = engine.check("don't know how this ocurance happened.");
+        assert("covers occurrence typo", issues.some((issue) => issue.raw === "ocurance" && issue.suggestion === "occurrence"));
+        assert("ordinary words around occurrence are not flagged", !issues.some((issue) => ["don't", "know", "how"].includes(issue.raw)));
         issues = engine.check("realavent and irrelavent are sound-it-out typos.");
         assert("covers relevant sound-out typo", issues.some((issue) => issue.raw === "realavent" && issue.suggestion === "relevant"));
         assert("covers irrelevant sound-out typo", issues.some((issue) => issue.raw === "irrelavent" && issue.suggestion === "irrelevant"));
