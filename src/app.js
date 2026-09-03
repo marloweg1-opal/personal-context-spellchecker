@@ -288,12 +288,14 @@
       try {
         const parsed = JSON.parse(this.storage.getItem(STORAGE_KEY));
         if (!parsed || parsed.schemaVersion !== 1) return fallback;
-        return Object.assign(fallback, parsed, {
+        const loaded = Object.assign(fallback, parsed, {
           contextProfiles: this.hydrateContextProfiles(Object.assign(fallback.contextProfiles, parsed.contextProfiles || {})),
           properNouns: this.hydrateProperNouns(parsed.properNouns || fallback.properNouns),
           acronyms: this.hydrateAcronyms(parsed.acronyms || fallback.acronyms),
           wordBank: this.hydrateWordBank(parsed.wordBank || fallback.wordBank)
         });
+        this.removeKnownTestFixtures(loaded);
+        return loaded;
       } catch (error) {
         this.log.write("recovery.state.corrupt", { error: String(error) });
         return fallback;
@@ -341,6 +343,25 @@
         acronyms[key].expansion = acronyms[key].expansion || "";
       });
       return acronyms;
+    }
+
+    removeKnownTestFixtures(state) {
+      let changed = false;
+      const runevale = state.wordBank.runevale;
+      if (runevale && runevale.source === "test") {
+        delete state.wordBank.runevale;
+        changed = true;
+      }
+      const teh = state.wordBank.teh;
+      if (teh && teh.source === "never-correct" && teh.neverCorrect && teh.count === 1 && !teh.favorite) {
+        delete state.wordBank.teh;
+        changed = true;
+      }
+      if (changed) {
+        state.updatedAt = nowIso();
+        this.storage.setItem(STORAGE_KEY, JSON.stringify(state));
+        this.log.write("recovery.test_fixtures_removed", { words: ["runevale", "teh"] });
+      }
     }
 
     hasPersonalWord(word) {

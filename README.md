@@ -18,6 +18,12 @@ The launch script starts a local Python web server. It does not request elevatio
 
 Open `tests.html` in a browser. The tests exercise tokenization, edit distance, known confusion correction, contextual correction, personal words, never-correct decisions, learned corrections, and diagnostic logging.
 
+Smoke tests use in-memory storage and must not write to the live app's `localStorage`.
+
+## Release Cadence
+
+Use GitHub commits for meaningful checkpoints. Create a version tag and release snapshot after roughly 10 significant changes, or sooner for a user-visible bugfix, data recovery fix, or demo milestone.
+
 ## MVP Scope
 
 Included:

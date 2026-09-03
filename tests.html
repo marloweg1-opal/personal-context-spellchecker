@@ -74,6 +74,21 @@
         const store = new api.SpellStore(storage, log);
         const engine = new api.SpellEngine(store, log);
 
+        const pollutedStorage = createMemoryStorage();
+        pollutedStorage.setItem("personal-contextual-spellchecker/state/v1", JSON.stringify({
+          schemaVersion: 1,
+          wordBank: {
+            runevale: { word: "runevale", displayWord: "Runevale", source: "test", count: 1 },
+            teh: { word: "teh", displayWord: "teh", source: "never-correct", count: 1, favorite: false, neverCorrect: true },
+            realword: { word: "realword", displayWord: "RealWord", source: "manual", count: 1 }
+          },
+          learnedCorrections: {},
+          rejectedCorrections: {},
+          typoPatterns: {}
+        }));
+        const cleanedStore = new api.SpellStore(pollutedStorage, new api.DiagnosticLog(pollutedStorage));
+        assert("startup removes leaked test fixtures only", !cleanedStore.hasPersonalWord("Runevale") && !cleanedStore.hasPersonalWord("teh") && cleanedStore.hasPersonalWord("RealWord"));
+
         assert("tokenizes words with offsets", api.tokenize("Fix teh word.")[1].start === 4);
         assert("distance handles transposition", api.damerauLevenshtein("teh", "the") === 1);
 

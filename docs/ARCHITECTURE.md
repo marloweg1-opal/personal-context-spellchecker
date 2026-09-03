@@ -22,7 +22,7 @@ Version: 0.4.2
 4. Dependency boundaries: no runtime dependencies in v0.1.0. Future dictionaries, NLP models, or sync services should be adapters behind `SpellEngine` or `SpellStore`.
 5. Logs / observability: every check, accepted correction, word-bank change, definition action, export, reset, and recovery path writes a structured event with app version and timestamp.
 6. Recovery: state parsing and import are guarded. Corrupt or incompatible state falls back to a fresh schema or restores the prior snapshot and logs the recovery event.
-7. Source control: this app lives in `personal-contextual-spellchecker/` so its history can stay focused and it can be extracted into its own repository when it graduates past prototype.
+7. Source control: this app lives in `personal-contextual-spellchecker/` so its history can stay focused. Commit meaningful checkpoints, but batch public version tags and release snapshots until roughly 10 significant changes accumulate unless a bugfix needs an immediate release.
 8. Versioning: `APP_VERSION` and `schemaVersion` are persisted with state and logs. Any future migration should branch on `schemaVersion`.
 9. Performance: candidate scoring is bounded by a compact seed dictionary and local word bank. Logs are capped at 200 events. Large dictionaries should use indexed lookup or a worker.
 10. Deployment: static files can be served from any basic file host or opened directly from disk. `launch.ps1` starts a non-elevated local server. `apps/extension/` is the Manifest V3 target.
@@ -31,6 +31,10 @@ Version: 0.4.2
 ## Suggestion Layer
 
 Suggestions are rendered as one card per sentence or coherent thought. Each card has one `Accept All` action that applies every correction in that thought, while preserving individual accept/reject/dictionary/never-correct controls for precise review.
+
+## Test Isolation
+
+The app and `tests.html` share the same localhost origin when served from the launch script. Browser `localStorage` is scoped by origin, not by file, so tests that use `window.localStorage` can accidentally write fixture entries into the live app. Smoke tests must use an in-memory storage adapter. The app also has a narrow recovery cleanup for the known older fixtures `Runevale` and `teh` when their metadata matches the leaked test signatures.
 
 ## Extension Points
 
