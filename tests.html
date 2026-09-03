@@ -45,7 +45,6 @@
 
     <script>
       window.PERSONAL_SPELLCHECKER_SKIP_AUTO_START = true;
-      window.localStorage.clear();
     </script>
     <script src="src/app.js"></script>
     <script>
@@ -55,11 +54,24 @@
         if (!condition) throw new Error(name);
         lines.push(`PASS ${name}`);
       };
+      const createMemoryStorage = () => {
+        const items = {};
+        return {
+          getItem: (key) => Object.prototype.hasOwnProperty.call(items, key) ? items[key] : null,
+          setItem: (key, value) => {
+            items[key] = String(value);
+          },
+          removeItem: (key) => {
+            delete items[key];
+          }
+        };
+      };
 
       try {
         const api = window.PersonalSpellchecker;
-        const log = new api.DiagnosticLog(window.localStorage);
-        const store = new api.SpellStore(window.localStorage, log);
+        const storage = createMemoryStorage();
+        const log = new api.DiagnosticLog(storage);
+        const store = new api.SpellStore(storage, log);
         const engine = new api.SpellEngine(store, log);
 
         assert("tokenizes words with offsets", api.tokenize("Fix teh word.")[1].start === 4);
@@ -154,8 +166,9 @@
         assert("ordinary diagnostic logs omit full user sentences", !log.exportText().includes(privateSentence));
 
         const exported = store.exportState();
-        const importedLog = new api.DiagnosticLog(window.localStorage);
-        const importedStore = new api.SpellStore(window.localStorage, importedLog);
+        const importedStorage = createMemoryStorage();
+        const importedLog = new api.DiagnosticLog(importedStorage);
+        const importedStore = new api.SpellStore(importedStorage, importedLog);
         importedStore.importState(exported);
         const importedContexts = Object.values(importedStore.state.contextProfiles);
         assert("state export/import round-trips", importedStore.hasPersonalWord("Runevale") && importedContexts.some((context) => context.terms.solara) && importedStore.state.properNouns.libra && importedStore.state.acronyms.ark);

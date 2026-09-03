@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.2 - 2026-09-02
+
+- Isolated browser smoke tests from real app storage so fixture words no longer appear in the live word bank.
+
 ## 0.4.1 - 2026-09-02
 
 - Added common `occurrence` misspelling coverage.
