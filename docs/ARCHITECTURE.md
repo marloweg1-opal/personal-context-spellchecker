@@ -1,6 +1,6 @@
 # Architecture
 
-Version: 0.4.2
+Version: 0.5.0
 
 ## Component Boundaries
 
@@ -12,6 +12,8 @@ Version: 0.4.2
 - `DiagnosticLog`: append-style event log with capped local retention and JSONL export.
 - `AppController`: DOM glue. It translates clicks into store/engine operations and renders current state.
 - `ThoughtGrouping`: pure helper functions that group correction decisions by sentence or coherent thought and apply grouped replacements without mutating state.
+- `WritingSurfaceAdapter`: browser-only detection, privacy filtering, text access, selection mapping, and explicit replacement for supported webpage editors.
+- `ExtensionSuggestionUI`: a Shadow DOM panel that stays isolated from page CSS and translates accept/reject/never-correct actions into existing store and engine calls.
 
 ## Required Architecture Concerns
 
@@ -24,8 +26,16 @@ Version: 0.4.2
 7. Source control: this app lives in `personal-contextual-spellchecker/` so its history can stay focused. Commit meaningful checkpoints, but batch public version tags and release snapshots until roughly 10 significant changes accumulate unless a bugfix needs an immediate release.
 8. Versioning: `APP_VERSION` and `schemaVersion` are persisted with state and logs. Any future migration should branch on `schemaVersion`.
 9. Performance: candidate scoring is bounded by a compact seed dictionary and local word bank. Logs are capped at 200 events. Large dictionaries should use indexed lookup or a worker.
-10. Deployment: static files can be served from any basic file host or opened directly from disk. `launch.ps1` starts a non-elevated local server. `apps/extension/` is the Manifest V3 target.
-11. Security: all state stays local unless the user exports it. Rendered dynamic text is escaped. Definition lookup is opened with `noopener`. No remote scripts are loaded.
+10. Deployment: static files can be served from any basic file host or opened directly from disk. `launch.ps1` starts a non-elevated local server. `sync-extension.ps1` packages the canonical engine into the loadable Manifest V3 directory.
+11. Security: all state stays local unless the user exports it. The extension reads only the active supported editing surface, excludes sensitive-looking controls, and offers site/field opt-outs. Rendered dynamic text is escaped. No remote scripts or cloud correction services are loaded.
+
+## Browser Integration Boundary
+
+The runtime flow is `Writing Surface Adapter -> SpellEngine -> SpellStore -> Suggestion UI`. `src/app.js` remains the canonical correction implementation; `sync-extension.ps1` copies it to `apps/extension/core.js` for Manifest V3 packaging. The extension adapter never introduces a second ranking engine.
+
+Extension state uses `chrome.storage.local`, while the playground uses origin `localStorage`. A one-time localhost migration preserves existing schema-v1 state when extension storage is empty. Import/export provides the explicit recovery and transfer path after installation.
+
+The content script has broad HTTP/HTTPS matching because correction must be available while typing on ordinary pages. It does not scan unrelated page text. A future store distribution should prefer optional host permissions and per-site grants once that activation workflow is designed.
 
 ## Suggestion Layer
 
@@ -45,7 +55,9 @@ The app and `tests.html` share the same localhost origin when served from the la
 - Add acronym import/export helpers for larger personal glossaries.
 - Add definition providers behind a `DefinitionService` instead of direct lookup URLs.
 - Move expensive candidate scoring into a Web Worker when dictionary size grows.
-- Extract the browser playground engine into package modules before wiring the extension correction UI, preserving one correction engine.
+- Split the canonical engine and playground controller into separate source modules when a build step is introduced; until then the synchronized extension artifact preserves one implementation.
+- Add specialized adapters only for complex editors demonstrated to need them.
+- Introduce an approved-state bridge for Journey behind the same store interface; do not expose unrestricted browsing or typed-content observation.
 
 ## Real-Time Autocorrect Path
 

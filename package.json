@@ -1,10 +1,11 @@
 {
   "name": "personal-contextual-spellchecker",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "private": true,
   "description": "Local-first personal contextual spellchecker MVP.",
   "scripts": {
     "start": "powershell -ExecutionPolicy Bypass -File ./launch.ps1",
+    "sync:extension": "powershell -ExecutionPolicy Bypass -File ./sync-extension.ps1",
     "test:manual": "python -m http.server 8766 --bind 127.0.0.1"
   },
   "keywords": [

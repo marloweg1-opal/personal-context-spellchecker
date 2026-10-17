@@ -1,6 +1,6 @@
 # Code Audit
 
-Date: 2026-09-02
+Date: 2026-10-16
 
 ## Scope
 
@@ -31,5 +31,21 @@ Going forward, use GitHub commits for meaningful checkpoints and hold version ta
 ## Deferred
 
 - Larger dictionaries should move behind an indexed adapter or worker before adding many thousands of words.
-- The extension scaffold still needs the full correction UI adapter.
+- Complex editors still need compatibility-specific adapters and verification.
 - Acronym expansion is a first useful slice, not a full glossary manager.
+
+## Browser Extension Audit
+
+- The extension packages the canonical playground engine instead of maintaining independent correction logic.
+- Browser-specific responsibilities are isolated in `surface-adapter.js` and `content-script.js`.
+- Password, payment-looking, credential-looking, contact, date, number, file, and other unsuitable fields are excluded before text is read.
+- Corrections require explicit acceptance; cancellable `beforeinput` is honored before mutation.
+- Input/textarea selection offsets are adjusted after replacement. Plain contenteditable text nodes are replaced in place to avoid replacing the entire editor DOM.
+- User state and diagnostics use extension-local storage. No typed content is sent over the network, and ordinary check logs store counts and lengths rather than full sentences.
+- Known limitation: complex editors may reject native mutations or use non-DOM document models and need dedicated adapters.
+
+## Brave Verification Status
+
+A disposable Brave profile initially showed **Error Loading Extension** because the automated launch command passed the repository path without preserving spaces. Copying the same extension package to a disposable no-space path opened `Extension Demo Fixture - Brave`, distinguishing that launch-argument error from a manifest or package failure.
+
+Browser automation then stopped because it could not identify the Brave window URL with enough confidence to continue under its security policy. No browser security check was bypassed. The extension package is loadable, but end-to-end Brave interaction remains a manual release gate documented in `BRAVE_VERIFICATION.md`.

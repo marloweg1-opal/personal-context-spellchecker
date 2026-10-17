@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Completed a usable Manifest V3 Brave/Chrome extension vertical slice using the existing correction engine.
+- Added thought-grouped in-page suggestions with individual and group acceptance.
+- Added selection-aware replacements for text fields, textareas, and plain contenteditable surfaces.
+- Added privacy exclusions for password, payment, credential, contact, date, number, file, and sensitive-looking inputs.
+- Added field and reversible site opt-outs, active-context selection, and extension state import/export.
+- Added one-time localhost migration for existing playground learning state.
+- Added a disposable browser-extension demo fixture and surface-adapter regression coverage.
+
 - Added startup cleanup for known leaked smoke-test fixtures from older test runs.
 - Added a regression test proving smoke-test fixture cleanup does not remove real manual words.
 - Documented the code-audit result and release cadence.

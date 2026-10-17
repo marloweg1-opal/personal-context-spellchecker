@@ -46,6 +46,7 @@
       window.PERSONAL_SPELLCHECKER_SKIP_AUTO_START = true;
     </script>
     <script src="src/app.js"></script>
+    <script src="apps/extension/surface-adapter.js"></script>
     <script>
       const output = document.getElementById("test-output");
       const lines = [];
@@ -53,6 +54,7 @@
         if (!condition) throw new Error(name);
         lines.push(`PASS ${name}`);
       };
+      const surface = window.PersonalSpellcheckerSurface;
       const createMemoryStorage = () => {
         const items = {};
         return {
@@ -72,6 +74,38 @@
         const log = new api.DiagnosticLog(storage);
         const store = new api.SpellStore(storage, log);
         const engine = new api.SpellEngine(store, log);
+
+        const privateInput = document.createElement("input");
+        privateInput.type = "password";
+        assert("extension excludes password fields", !surface.isSupportedEditable(privateInput));
+        const paymentInput = document.createElement("input");
+        paymentInput.type = "text";
+        paymentInput.name = "credit-card-number";
+        assert("extension excludes sensitive-looking fields", !surface.isSupportedEditable(paymentInput));
+        const normalTextarea = document.createElement("textarea");
+        normalTextarea.value = "Fix teh word";
+        normalTextarea.setSelectionRange(12, 12);
+        assert("extension supports ordinary textareas", surface.isSupportedEditable(normalTextarea));
+        assert("selection offsets account for replacements", surface.adjustedSelection(12, [{ start: 4, end: 7, suggestion: "the", raw: "teh" }], api.replacementForIssue) === 12);
+        normalTextarea.addEventListener("beforeinput", (event) => event.preventDefault(), { once: true });
+        assert("editors can cancel extension replacement", surface.replaceIssues(normalTextarea, [{ start: 4, end: 7, suggestion: "the", raw: "teh" }], api.replacementForIssue) === false && normalTextarea.value.includes("teh"));
+        assert("extension replacement updates text", surface.replaceIssues(normalTextarea, [{ start: 4, end: 7, suggestion: "the", raw: "teh" }], api.replacementForIssue) && normalTextarea.value === "Fix the word");
+        const editable = document.createElement("div");
+        editable.contentEditable = "true";
+        editable.textContent = "Fix teh word";
+        document.body.appendChild(editable);
+        const editableRange = document.createRange();
+        editableRange.setStart(editable.firstChild, 12);
+        editableRange.collapse(true);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(editableRange);
+        assert("contenteditable replacement preserves plain text", surface.replaceIssues(editable, [{ start: 4, end: 7, suggestion: "the", raw: "teh" }], api.replacementForIssue) && editable.textContent === "Fix the word");
+        const restoredSelection = window.getSelection();
+        const restoredOffset = document.createRange();
+        restoredOffset.selectNodeContents(editable);
+        restoredOffset.setEnd(restoredSelection.anchorNode, restoredSelection.anchorOffset);
+        assert("contenteditable replacement restores selection", restoredOffset.toString().length === 12);
+        editable.remove();
 
         const pollutedStorage = createMemoryStorage();
         pollutedStorage.setItem("personal-contextual-spellchecker/state/v1", JSON.stringify({

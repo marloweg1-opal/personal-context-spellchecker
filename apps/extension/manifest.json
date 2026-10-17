@@ -1,11 +1,16 @@
 {
   "manifest_version": 3,
   "name": "Personal Contextual Spellchecker",
-  "version": "0.1.0",
+  "version": "0.5.0",
   "description": "Local-first personal spellchecking for supported editable fields.",
   "permissions": [
-    "storage"
+    "storage",
+    "activeTab"
   ],
+  "action": {
+    "default_title": "Personal Spellchecker",
+    "default_popup": "popup.html"
+  },
   "content_scripts": [
     {
       "matches": [
@@ -13,6 +18,9 @@
         "https://*/*"
       ],
       "js": [
+        "bootstrap.js",
+        "core.js",
+        "surface-adapter.js",
         "content-script.js"
       ],
       "run_at": "document_idle"

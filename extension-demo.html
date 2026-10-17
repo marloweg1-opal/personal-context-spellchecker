@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Extension Demo Fixture</title>
+    <link rel="stylesheet" href="src/styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar"><div><h1>Extension Demo Fixture</h1><p>Disposable fields for verifying the unpacked Brave/Chrome extension.</p></div></header>
+      <section class="word-bank-section">
+        <label for="demo-text">Textarea</label>
+        <textarea id="demo-text" spellcheck="false">I've had enoweg of this. I defintely want to recieve the right word.</textarea>
+      </section>
+      <section class="word-bank-section">
+        <label for="demo-input">Text input</label>
+        <input id="demo-input" type="text" value="teh context is realavent" style="width:100%">
+      </section>
+      <section class="word-bank-section">
+        <span>Contenteditable</span>
+        <div id="demo-editable" contenteditable="true" role="textbox" aria-label="Demo contenteditable" style="min-height:100px;border:1px solid #d9e0e6;border-radius:7px;padding:14px">I recieved teh context.</div>
+      </section>
+      <section class="word-bank-section">
+        <label for="demo-password">Excluded password field</label>
+        <input id="demo-password" type="password" value="defintely-secret" style="width:100%">
+      </section>
+    </main>
+  </body>
+</html>

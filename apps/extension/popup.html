@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Personal Spellchecker</title>
+    <style>
+      body { width: 300px; margin: 0; color: #17202a; background: #fff; font: 14px/1.45 system-ui, sans-serif; }
+      main { padding: 14px; }
+      h1 { margin: 0 0 5px; font-size: 17px; letter-spacing: 0; }
+      p { margin: 0 0 12px; color: #596875; }
+      .actions { display: grid; gap: 8px; }
+      button, select { min-height: 36px; width: 100%; border: 1px solid #cbd5df; border-radius: 6px; padding: 0 10px; background: #fff; color: #17202a; font: inherit; }
+      button { cursor: pointer; }
+      button:hover, button:focus, select:focus { border-color: #0f766e; outline: none; }
+      .primary { border-color: #0f766e; color: #fff; background: #0f766e; }
+      label { display: grid; gap: 5px; font-weight: 650; }
+      #status { min-height: 20px; margin-top: 10px; color: #0f665f; }
+      input { display: none; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Personal Spellchecker</h1>
+      <p id="site-label">Local suggestions with explicit acceptance.</p>
+      <div class="actions">
+        <button id="site-toggle" class="primary" type="button">Disable on this site</button>
+        <label>Active context<select id="context"></select></label>
+        <button id="export" type="button">Export personal state</button>
+        <button id="import" type="button">Import personal state</button>
+        <input id="state-file" type="file" accept="application/json,.json">
+      </div>
+      <div id="status" role="status"></div>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>

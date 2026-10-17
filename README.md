@@ -26,7 +26,7 @@ Use GitHub commits for meaningful checkpoints. Create a version tag and release 
 
 ## Handoff
 
-See `docs/ARK_HANDOFF.md` for the current ARK-facing project handoff, including the difference between text occurrence searches and reading code context.
+See `docs/ARK_HANDOFF.md` for the current ARK-facing project handoff.
 
 ## MVP Scope
 
@@ -58,9 +58,27 @@ Not included:
 - Personality modes.
 - Real-time autocorrect.
 
-## Extension Status
+## Brave / Chrome Extension
 
-`apps/extension/` contains the first Brave/Chrome Manifest V3 scaffold. It marks supported editable fields and blocks password-like inputs. The full correction UI is still in the playground until the core is extracted behind the extension adapter.
+The Manifest V3 extension in `apps/extension/` runs the same `SpellEngine` and `SpellStore` used by the playground. It checks the active supported field, groups suggestions by thought, and applies only corrections the user explicitly accepts.
+
+Install in Brave:
+
+1. Run `npm run sync:extension` after changing `src/app.js`.
+2. Open `brave://extensions`.
+3. Turn on **Developer mode**.
+4. Choose **Load unpacked** and select the repository's `apps/extension` folder.
+5. Run `./launch.ps1`, open `http://127.0.0.1:8765/extension-demo.html`, and type in a demo field.
+
+Chrome uses the same steps at `chrome://extensions`.
+
+See `docs/BRAVE_VERIFICATION.md` for the milestone's disposable manual test checklist and expected results.
+
+The toolbar popup can disable or re-enable the current site, choose an existing context, and import or export personal state. On first use at the localhost playground, the extension migrates existing schema-v1 playground state when extension state is empty.
+
+Supported now: ordinary text inputs, textareas, and plain contenteditable regions. Password, payment-looking, credential-looking, contact, date, number, file, and other sensitive or unsuitable inputs are excluded. Complex editors with virtualized document models, cross-origin frames, canvas editors, or custom mutation handling may require dedicated adapters.
+
+Rollback: remove the unpacked extension from the extensions page. Its `chrome.storage.local` data stays inside that extension installation unless the extension is removed; export state first if it matters.
 
 ## Recovery
 

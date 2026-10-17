@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const APP_VERSION = "0.4.2";
+  const APP_VERSION = "0.5.0";
   const STORAGE_KEY = "personal-contextual-spellchecker/state/v1";
   const LOG_KEY = "personal-contextual-spellchecker/logs/v1";
 
